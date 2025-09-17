@@ -95,7 +95,7 @@ export function ImageDisplay({ generation }: ImageDisplayProps) {
                 {/* Image Actions */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="text-xs text-muted-foreground space-y-1 flex-1">
-                    <p>Size: {image.width} × {image.height}</p>
+                    <p>Size: {image.width || 1024} × {image.height || 1024}</p>
                     {generation.seed && <p>Seed: {generation.seed}</p>}
                   </div>
 
@@ -114,11 +114,6 @@ export function ImageDisplay({ generation }: ImageDisplayProps) {
           </div>
         )}
 
-        {/* Generation Info */}
-        <div className="text-xs text-center text-muted-foreground pt-4 border-t">
-          <p>Generated: {generation.createdAt.toLocaleString()}</p>
-          <p>Model: SDXL-Lightning</p>
-        </div>
       </CardContent>
     </Card>
   );

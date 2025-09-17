@@ -185,7 +185,7 @@ export function ImageUpload({ onImageSelect, currentImage, disabled = false }: I
                       Drop an image here, or click to browse
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      PNG, JPG, or WebP up to 5MB
+                      PNG, JPG, or WebP up to 15MB
                     </p>
                   </div>
                 </>

@@ -2,8 +2,8 @@
 import { log } from './logger';
 import type { SourceImage } from '@/types';
 
-// Maximum file size in bytes (5MB)
-export const MAX_FILE_SIZE = 5 * 1024 * 1024;
+// Maximum file size in bytes (15MB)
+export const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
 // Supported image formats
 export const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/webp'];
@@ -57,6 +57,60 @@ export function fileToDataUrl(file: File): Promise<string> {
 }
 
 /**
+ * Compress image to reduce file size for API upload
+ */
+export function compressImage(file: File, maxSizeKB: number = 2000): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = () => {
+      // Calculate new dimensions (max 1920px width/height for API efficiency)
+      const maxDimension = 1920;
+      let { width, height } = img;
+
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = (height * maxDimension) / width;
+          width = maxDimension;
+        } else {
+          width = (width * maxDimension) / height;
+          height = maxDimension;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      // Draw and compress
+      ctx?.drawImage(img, 0, 0, width, height);
+
+      // Try different quality levels to meet size target
+      let quality = 0.9;
+      let dataUrl = '';
+
+      const tryCompress = () => {
+        dataUrl = canvas.toDataURL('image/jpeg', quality);
+        const sizeKB = (dataUrl.length * 3) / 4 / 1024; // Estimate base64 size in KB
+
+        if (sizeKB > maxSizeKB && quality > 0.1) {
+          quality -= 0.1;
+          tryCompress();
+        } else {
+          resolve(dataUrl);
+        }
+      };
+
+      tryCompress();
+    };
+
+    img.onerror = () => reject(new Error('Failed to load image for compression'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+/**
  * Process uploaded file and create SourceImage
  */
 export async function processImageFile(file: File): Promise<SourceImage> {
@@ -73,12 +127,20 @@ export async function processImageFile(file: File): Promise<SourceImage> {
   }
 
   try {
-    // Convert to data URL for immediate preview and API use
-    const dataUrl = await fileToDataUrl(file);
+    // For larger files, use compression to stay under API limits
+    let dataUrl: string;
+    if (file.size > 5 * 1024 * 1024) { // Files larger than 5MB
+      log.info('File is large, applying compression', { originalSize: file.size });
+      dataUrl = await compressImage(file, 5000); // Target 5MB compressed
+    } else {
+      dataUrl = await fileToDataUrl(file);
+    }
 
     log.info('Image file processed successfully', {
       filename: file.name,
-      dataUrlLength: dataUrl.length
+      originalSize: file.size,
+      dataUrlLength: dataUrl.length,
+      estimatedSizeKB: Math.round((dataUrl.length * 3) / 4 / 1024)
     });
 
     return {

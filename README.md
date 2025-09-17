@@ -83,7 +83,7 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 
 ### Image-to-Image Generation
 - ✅ 3 specialized models (SeedDream v4 Edit, WAN v2.2 I2I, Nano-Banana Edit)
-- ✅ File upload with preview and validation (PNG, JPG, WebP up to 5MB)
+- ✅ File upload with preview and validation (PNG, JPG, WebP up to 15MB with automatic compression)
 - ✅ Transformation strength control for WAN models
 - ✅ Same aspect ratio support as text-to-image
 

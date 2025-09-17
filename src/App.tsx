@@ -27,28 +27,26 @@ function App() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <header className="text-center space-y-6">
           <div className="flex items-center justify-center space-x-3">
             <Skull className="w-12 h-12 text-primary" />
             <h1 className="text-5xl font-bold">DarkCanvas</h1>
           </div>
-          <p className="text-xl text-muted-foreground">
-            AI Image Generation Interface
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Phase 1 MVP • SDXL-Lightning • Default Theme
-          </p>
         </header>
 
         {/* Main Content */}
-        <main className="space-y-8">
+        <main className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Generation Form */}
-          <GenerationForm onGeneration={handleGeneration} />
+          <div>
+            <GenerationForm onGeneration={handleGeneration} />
+          </div>
 
           {/* Image Display */}
-          <ImageDisplay generation={currentGeneration} />
+          <div>
+            <ImageDisplay generation={currentGeneration} />
+          </div>
         </main>
 
         {/* Footer */}
