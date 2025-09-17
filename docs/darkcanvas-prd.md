@@ -16,7 +16,7 @@ Build a simple web interface to experiment with multiple fal.ai image generation
 1. **Model Selection** - Dropdown to choose between supported models
 2. **Prompt Input** - Text area for image prompts  
 3. **Basic Parameters** - Common settings like image size, steps, guidance
-4. **Safety Toggle** - Enable/disable safety checker
+4. **Safety Configuration** - Safety checker disabled by default for unrestricted generation
 5. **Generate Button** - Trigger image creation
 6. **Image Display** - Show generated result with download option
 7. **API Key Input** - Secure input for Fal.ai API key
@@ -46,7 +46,7 @@ interface ModelParameters {
   imageSize: string;
   steps: number;
   guidanceScale: number;
-  safetyChecker: boolean;
+  enableSafetyChecker: boolean;
   // model-specific params...
 }
 
@@ -66,15 +66,16 @@ interface FalModel {
 - **Styling**: Tailwind CSS with 8pt grid system
 - **State**: React hooks
 - **API Client**: @fal-ai/serverless-client
-- **Storage**: localStorage
+- **Storage**: Environment variables (.env files)
 - **Logging**: Simple console wrapper for dev/prod
 - **Testing**: Vitest for critical paths only
 - **API Verification**: ref MCP for current Fal.ai docs
 
-### API Key Management
-- Store in localStorage with `darkcanvas_fal_api_key`
-- Alternative: environment variable for personal use
-- Simple prompt fallback for missing key
+### API Key Management (SECURITY UPDATED 🔒)
+- **Environment Variables**: `VITE_FAL_API_KEY` in `.env` file (primary method)
+- **Security First**: No browser storage, no XSS exposure
+- **Git Safe**: `.env` in `.gitignore`, `.env.example` for setup
+- **Developer Friendly**: Clear error messages with setup instructions
 
 ## 🎨 Design Direction
 
@@ -132,7 +133,7 @@ interface FalModel {
 - Basic project setup (Vite, React, TypeScript, shadcn/ui)
 - Single model support (SDXL-Lightning - cheapest)
 - Core UI: prompt input, generate button, image display
-- API key management with localStorage
+- API key management with secure environment variables
 - Simple error handling and loading states
 - Deploy to production (Vercel/Netlify)
 
@@ -225,4 +226,14 @@ darkcanvas/
 
 *See CLAUDE.md for detailed development workflow*
 
-Ready to start DarkCanvas Phase 1! 🎨🌑
+## 🎯 Status Update
+
+**Phase 1 MVP: COMPLETED ✅**
+
+- ✅ All core features implemented and working
+- ✅ Security upgraded to environment variables
+- ✅ Clean shadcn/ui default theme for accessibility
+- ✅ GitHub repository: https://github.com/undeadpickle/darkcanvas
+- ✅ Ready for deployment to production
+
+Ready for Phase 2 or production deployment! 🎨🌑

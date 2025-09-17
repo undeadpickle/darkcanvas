@@ -1,24 +1,55 @@
 import { useState } from 'react';
-import { Skull, Loader2 } from 'lucide-react';
+import { Skull, Loader2, Image as ImageIcon, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { generateImage, isConfigured } from '@/lib/fal';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { generateImage, generateImageFromImage, isConfigured } from '@/lib/fal';
+import { getModelsByType, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/lib/models';
+import { ImageUpload } from './ImageUpload';
 import { log } from '@/lib/logger';
-import type { ImageGeneration } from '@/types';
+import type { ImageGeneration, GenerationType, SourceImage } from '@/types';
 
 interface GenerationFormProps {
   onGeneration: (generation: ImageGeneration) => void;
 }
 
 export function GenerationForm({ onGeneration }: GenerationFormProps) {
+  const [generationType, setGenerationType] = useState<GenerationType>('text-to-image');
   const [prompt, setPrompt] = useState('');
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_TEXT_TO_IMAGE_MODEL.id);
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState(DEFAULT_ASPECT_RATIO.value);
+  const [sourceImage, setSourceImage] = useState<SourceImage | null>(null);
+  const [strength, setStrength] = useState([0.8]); // Slider expects array
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Get available models for the current generation type
+  const availableModels = getModelsByType(generationType);
+
+  // Handle generation type change
+  const handleGenerationTypeChange = (type: GenerationType) => {
+    setGenerationType(type);
+    setError(null);
+
+    // Reset model selection to default for the new type
+    if (type === 'text-to-image') {
+      setSelectedModel(DEFAULT_TEXT_TO_IMAGE_MODEL.id);
+      setSourceImage(null); // Clear source image for T2I
+    } else {
+      setSelectedModel(DEFAULT_IMAGE_TO_IMAGE_MODEL.id);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       setError('Please enter a prompt');
+      return;
+    }
+
+    if (generationType === 'image-to-image' && !sourceImage) {
+      setError('Please upload a source image for image-to-image generation');
       return;
     }
 
@@ -36,6 +67,10 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
     const generation: ImageGeneration = {
       id: generationId,
       prompt: prompt.trim(),
+      modelId: selectedModel,
+      generationType,
+      sourceImage: sourceImage || undefined,
+      strength: generationType === 'image-to-image' ? strength[0] : undefined,
       images: [],
       status: 'generating',
       createdAt: new Date(),
@@ -44,14 +79,42 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
     onGeneration(generation);
 
     try {
-      log.info('Starting generation', { prompt: prompt.trim() });
-
-      const result = await generateImage({
+      log.info('Starting generation', {
         prompt: prompt.trim(),
-        imageSize: 'square_hd',
-        numImages: 1,
-        safetyChecker: true,
+        type: generationType,
+        model: selectedModel
       });
+
+      let result;
+
+      if (generationType === 'text-to-image') {
+        result = await generateImage({
+          prompt: prompt.trim(),
+          modelId: selectedModel,
+          imageSize: selectedAspectRatio,
+          numImages: 1,
+          enableSafetyChecker: false,
+          numInferenceSteps: 4,
+          imageFormat: 'png',
+        });
+      } else {
+        // Image-to-image generation
+        if (!sourceImage) {
+          throw new Error('Source image is required for image-to-image generation');
+        }
+
+        result = await generateImageFromImage({
+          prompt: prompt.trim(),
+          sourceImage,
+          modelId: selectedModel,
+          strength: strength[0],
+          imageSize: selectedAspectRatio,
+          numImages: 1,
+          enableSafetyChecker: false,
+          numInferenceSteps: 4,
+          imageFormat: 'png',
+        });
+      }
 
       const completedGeneration: ImageGeneration = {
         ...generation,
@@ -64,6 +127,7 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
 
       log.info('Generation completed successfully', {
         id: generationId,
+        type: generationType,
         imageCount: result.images.length
       });
 
@@ -79,13 +143,20 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
 
       onGeneration(failedGeneration);
 
-      log.error('Generation failed', { id: generationId, error: errorMessage });
+      log.error('Generation failed', {
+        id: generationId,
+        type: generationType,
+        error: errorMessage
+      });
     } finally {
       setIsGenerating(false);
     }
   };
 
   const isConfiguredState = isConfigured();
+
+  // Check if current model supports strength parameter (WAN models)
+  const supportsStrength = selectedModel.includes('wan') && generationType === 'image-to-image';
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -95,7 +166,7 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
           <span>Generate Image</span>
         </CardTitle>
         <CardDescription>
-          Create images with SDXL-Lightning model
+          Create images with AI - text-to-image or image-to-image
         </CardDescription>
       </CardHeader>
 
@@ -112,6 +183,112 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
           </div>
         )}
 
+        {/* Generation Type Toggle */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">
+            Generation Mode
+          </label>
+          <div className="flex space-x-2">
+            <Button
+              variant={generationType === 'text-to-image' ? 'default' : 'outline'}
+              size="sm"
+              className="flex-1"
+              onClick={() => handleGenerationTypeChange('text-to-image')}
+            >
+              <Type className="w-4 h-4 mr-2" />
+              Text-to-Image
+            </Button>
+            <Button
+              variant={generationType === 'image-to-image' ? 'default' : 'outline'}
+              size="sm"
+              className="flex-1"
+              onClick={() => handleGenerationTypeChange('image-to-image')}
+            >
+              <ImageIcon className="w-4 h-4 mr-2" />
+              Image-to-Image
+            </Button>
+          </div>
+        </div>
+
+        {/* Model Selector */}
+        <div className="space-y-2">
+          <label htmlFor="model" className="text-sm font-medium text-muted-foreground">
+            Model
+          </label>
+          <Select value={selectedModel} onValueChange={setSelectedModel}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a model" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableModels.map((model) => (
+                <SelectItem key={model.id} value={model.id}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{model.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {model.description} • {model.costEstimate}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Aspect Ratio Selector */}
+        <div className="space-y-2">
+          <label htmlFor="aspect-ratio" className="text-sm font-medium text-muted-foreground">
+            Aspect Ratio
+          </label>
+          <Select value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select aspect ratio" />
+            </SelectTrigger>
+            <SelectContent>
+              {ASPECT_RATIOS.map((ratio) => (
+                <SelectItem key={ratio.id} value={ratio.value}>
+                  <span>{ratio.name} ({ratio.description})</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Image Upload (Image-to-Image only) */}
+        {generationType === 'image-to-image' && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Source Image
+            </label>
+            <ImageUpload
+              onImageSelect={setSourceImage}
+              currentImage={sourceImage}
+              disabled={isGenerating}
+            />
+          </div>
+        )}
+
+        {/* Strength Slider (Image-to-Image with WAN models only) */}
+        {supportsStrength && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Transformation Strength: {strength[0].toFixed(1)}
+            </label>
+            <div className="px-2">
+              <Slider
+                value={strength}
+                onValueChange={setStrength}
+                max={1}
+                min={0.1}
+                step={0.1}
+                className="w-full"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Lower values preserve the original image, higher values allow more transformation
+            </p>
+          </div>
+        )}
+
         {/* Prompt Input */}
         <div className="space-y-2">
           <label htmlFor="prompt" className="text-sm font-medium text-muted-foreground">
@@ -119,7 +296,11 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
           </label>
           <Textarea
             id="prompt"
-            placeholder="Describe the image you want to create..."
+            placeholder={
+              generationType === 'text-to-image'
+                ? "Describe the image you want to create..."
+                : "Describe how you want to transform the source image..."
+            }
             value={prompt}
             onChange={(e) => {
               setPrompt(e.target.value);
@@ -163,7 +344,10 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
         {/* Status */}
         {isConfiguredState && (
           <p className="text-xs text-center text-muted-foreground">
-            Using SDXL-Lightning • ~$0.003 per image
+            Mode: {generationType} • Model: {availableModels.find(m => m.id === selectedModel)?.name}
+            • {ASPECT_RATIOS.find(r => r.value === selectedAspectRatio)?.description}
+            {supportsStrength && ` • Strength: ${strength[0].toFixed(1)}`}
+            • PNG format
           </p>
         )}
       </CardContent>

@@ -1,18 +1,27 @@
 # DarkCanvas
 
-A simple web interface for Fal.ai image generation using SDXL-Lightning model.
+A simple web interface for Fal.ai image generation with multiple AI models and aspect ratio options.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 18+
-- Fal.ai API key
+- Fal.ai API key (get from [fal.ai/dashboard](https://fal.ai/dashboard))
 
-### Installation & Development
+### Installation & Setup
 
 ```bash
+# Clone the repository
+git clone https://github.com/undeadpickle/darkcanvas.git
+cd darkcanvas
+
 # Install dependencies
 npm install
+
+# Create environment file
+cp .env.example .env
+# Edit .env and add your Fal.ai API key:
+# VITE_FAL_API_KEY=your_fal_api_key_here
 
 # Start development server
 npm run dev
@@ -24,10 +33,12 @@ npm run build
 npm run preview
 ```
 
-### Setup
-1. Open http://localhost:5173
-2. Enter your Fal.ai API key when prompted
-3. Enter a prompt and click "Generate Image"
+### Environment Setup
+1. Get your API key from [fal.ai/dashboard](https://fal.ai/dashboard)
+2. Copy `.env.example` to `.env`
+3. Add your API key: `VITE_FAL_API_KEY=your_key_here`
+4. Start the dev server with `npm run dev`
+5. Open the local URL shown in your terminal (typically http://localhost:5173) and generate images!
 
 ## 🏗️ Tech Stack
 
@@ -42,10 +53,15 @@ npm run preview
 ```
 src/
 ├── components/
-│   ├── ui/              # shadcn/ui components
+│   ├── ui/              # shadcn/ui components (Button, Card, Select, Slider)
 │   └── generation/      # Image generation components
+│       ├── GenerationForm.tsx    # Main form with mode toggle
+│       ├── ImageUpload.tsx       # File upload for image-to-image
+│       └── ImageDisplay.tsx      # Generated image display
 ├── lib/
-│   ├── fal.ts          # Fal.ai client setup
+│   ├── fal.ts          # Fal.ai client (text-to-image & image-to-image)
+│   ├── models.ts       # Model configurations (6 total models)
+│   ├── image-utils.ts  # Image upload and validation utilities
 │   ├── logger.ts       # Simple logging
 │   └── utils.ts        # Utilities
 ├── types/              # TypeScript definitions
@@ -60,8 +76,20 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 
 ## 📋 Features
 
-- ✅ SDXL-Lightning image generation
-- ✅ API key management (localStorage)
+### Text-to-Image Generation
+- ✅ Multiple AI model support (SDXL-Lightning, SeedDream v4, WAN v2.2 LoRA)
+- ✅ Aspect ratio presets (Square, Landscape, Portrait variations)
+- ✅ PNG format output with safety checker disabled
+
+### Image-to-Image Generation
+- ✅ 3 specialized models (SeedDream v4 Edit, WAN v2.2 I2I, Nano-Banana Edit)
+- ✅ File upload with preview and validation (PNG, JPG, WebP up to 5MB)
+- ✅ Transformation strength control for WAN models
+- ✅ Same aspect ratio support as text-to-image
+
+### Core Features
+- ✅ Mode toggle between text-to-image and image-to-image
+- ✅ API key management (secure environment variables)
 - ✅ Image download functionality
 - ✅ Error handling and loading states
 - ✅ Responsive design with shadcn/ui
@@ -69,7 +97,13 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 
 ## 🔑 Environment
 
-API key is stored securely in browser localStorage. No backend required.
+API key is stored securely in environment variables. No backend required.
+
+### Security Features
+- Environment-based API key storage (not in browser)
+- `.env` files automatically ignored by Git
+- No localStorage exposure to XSS attacks
+- Clear setup instructions for new developers
 
 ## 📄 License
 

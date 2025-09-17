@@ -13,7 +13,7 @@
 ### Development Principles
 
 - **KISS**: Choose boring technology that works
-- **YAGNI**: Build only what's needed for Phase 1 MVP
+- **YAGNI**: Build only what's needed for current phase
 - **DRY**: Extract patterns only after they appear 2-3 times
 - **MVP First**: Working > Perfect
 
@@ -91,7 +91,7 @@ git worktree add ../darkcanvas-generation feature/generation
 
 - **FIRST**: Use ref MCP to verify current Fal.ai API documentation
 - Read existing files to understand patterns
-- Check PRD.md for feature scope (stick to Phase 1!)
+- Check docs/darkcanvas-prd.md for feature scope (stick to Phase 1!)
 - Identify which shadcn/ui components to use
 
 ### 2. PLAN Phase
@@ -129,14 +129,30 @@ git worktree add ../darkcanvas-generation feature/generation
 - [x] Basic prompt input
 - [x] Generate button
 - [x] Display image result
-- [x] API key management
+- [x] API key management (secure environment variables)
 - [x] Simple error handling
+
+### Phase 2 Scope (COMPLETED ✅)
+
+- [x] Multiple model support (SDXL-Lightning, SeedDream v4, WAN v2.2 LoRA)
+- [x] Model selector dropdown with descriptions and costs
+- [x] Aspect ratio presets (Square, Landscape, Portrait variations)
+- [x] PNG format output with safety checker disabled
+- [x] Robust response handling for different model formats
+
+### Phase 2.5: Image-to-Image (COMPLETED ✅)
+
+- [x] Mode toggle between text-to-image and image-to-image generation
+- [x] 3 specialized I2I models (SeedDream v4 Edit, WAN v2.2 I2I, Nano-Banana Edit)
+- [x] Image upload component with file validation (PNG, JPG, WebP up to 5MB)
+- [x] Transformation strength slider for WAN models (0.1-1.0)
+- [x] Unified API handling for different model input formats (image_url vs image_urls)
+- [x] Aspect ratio support for both generation modes
 
 ### What NOT to Build (YAGNI)
 
-❌ Multiple model support (Phase 2)
-❌ History/gallery (Phase 2)
-❌ Parameter presets (Phase 2)
+❌ History/gallery (Phase 3)
+❌ Parameter presets (Phase 3)
 ❌ Perfect error handling
 ❌ Analytics
 ❌ User accounts
@@ -147,7 +163,7 @@ git worktree add ../darkcanvas-generation feature/generation
 ### Quick Quality Checks
 
 - [ ] Works with SDXL-Lightning model
-- [ ] Handles missing API key
+- [x] Handles missing API key (environment setup guide)
 - [ ] Shows loading state during generation
 - [ ] Displays errors to user
 - [ ] Uses 8pt grid spacing
@@ -205,8 +221,8 @@ export function GenerateButton({ onClick, loading }: Props) {
 ```typescript
 // Only test what breaks in production
 describe("Critical Paths", () => {
-  test("API key storage", () => {
-    // User WILL lose their key if this breaks
+  test("API key environment setup", () => {
+    // User WILL see errors if environment not configured
   });
 
   test("Generation error handling", () => {
@@ -286,6 +302,7 @@ npm run build && npm run preview
 
 _Project: DarkCanvas_
 _Goal: Ship MVP in 1 week_
-_Current Phase: 1 (COMPLETED ✅) - Ready for Phase 2 or Deployment_
+_Current Phase: 2.5 (COMPLETED ✅) - Image-to-Image Implementation Complete_
 _Updated: September 16, 2025_
-_Status: Fully functional MVP with shadcn/ui default theme_
+_Status: 6 total models (3 text-to-image + 3 image-to-image) with full feature parity_
+_GitHub: https://github.com/undeadpickle/darkcanvas_
