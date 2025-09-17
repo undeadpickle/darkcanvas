@@ -1,0 +1,291 @@
+# CLAUDE.md
+
+<!-- Claude Code automatically reads this file for project context and guidelines -->
+
+## 🎯 Project: DarkCanvas - Fal.ai Image Generation Interface
+
+**MVP Goal: Ship working image generator in 1 week**
+
+## Core Philosophy: KISS → YAGNI → DRY
+
+**Ship fast, iterate based on actual usage**
+
+### Development Principles
+
+- **KISS**: Choose boring technology that works
+- **YAGNI**: Build only what's needed for Phase 1 MVP
+- **DRY**: Extract patterns only after they appear 2-3 times
+- **MVP First**: Working > Perfect
+
+## 🤖 Using Claude Code (Agentic Terminal Tool)
+
+### Sub-Agents Feature (Aug 2025)
+
+**TL;DR: Claude Code can spawn specialized sub-agents for complex tasks**
+
+**What**: Independent AI agents with focused expertise and separate context
+**When**: Multi-file refactors, parallel exploration, complex debugging
+**For DarkCanvas MVP**: Probably YAGNI - our scope is too simple
+
+If needed: `/agents` in Claude Code creates them automatically
+
+### When to Use Claude Code vs This Chat
+
+**Claude Code** (`claude` in terminal):
+
+- Multi-file edits and refactoring
+- Running tests and debugging
+- Git operations and PR creation
+- Exploring unfamiliar codebases
+- Batch operations across files
+
+**This Chat Interface**:
+
+- Planning and architecture decisions
+- Creating initial artifacts/templates
+- Understanding concepts
+- Reviewing approach before implementation
+
+### Claude Code Best Practices for DarkCanvas
+
+```bash
+# Basic workflow
+cd darkcanvas
+claude  # Interactive mode
+
+# Headless mode for specific tasks
+claude -p "Convert the API key dialog to use shadcn Dialog component"
+
+# TDD approach (great for MVPs!)
+claude -p "Write tests for image generation with mock Fal.ai responses"
+# Review tests, then:
+claude -p "Now implement the code to pass these tests"
+```
+
+### Effective Prompting for Claude Code
+
+1. **Be explicit about constraints**: "Using only shadcn/ui components..."
+2. **Reference the docs**: "Following our PRD and CLAUDE.md guidelines..."
+3. **Ask for exploration first**: "What's the current structure of the generation module?"
+4. **Use TDD for critical paths**: Write tests first, then implementation
+
+### Git Worktrees for Parallel Work
+
+```bash
+# Work on multiple features simultaneously
+git worktree add ../darkcanvas-api-key feature/api-key
+git worktree add ../darkcanvas-generation feature/generation
+# Run separate Claude sessions in each
+```
+
+### ⚠️ Claude Code Limitations for MVP
+
+- Don't let it over-engineer (remind it about YAGNI)
+- Always verify it's using Phase 1 scope only
+- Check that it's not adding unnecessary dependencies
+- Review before letting it commit (especially early on)
+
+## Core Workflow: EXPLORE → PLAN → EXECUTE
+
+### 1. EXPLORE Phase
+
+- **FIRST**: Use ref MCP to verify current Fal.ai API documentation
+- Read existing files to understand patterns
+- Check PRD.md for feature scope (stick to Phase 1!)
+- Identify which shadcn/ui components to use
+
+### 2. PLAN Phase
+
+**Remember: We're shipping in 1 week, not building for enterprise**
+
+- Break into small, shippable pieces
+- Risk assessment for DarkCanvas:
+  - **Low risk (1-2 files):** Just code it
+  - **Medium risk (3+ files):** Quick plan, then code
+  - **High risk (architecture):** Stop - probably YAGNI
+- If plan takes >30 min, you're overthinking
+
+### 3. EXECUTE Phase
+
+- Follow plan, but pivot fast if blocked
+- Test only critical paths (API key, generation)
+- Use console.log for debugging (we have a simple logger)
+- Commit when it works, not when it's perfect
+
+## DarkCanvas Specific Guidelines
+
+### Tech Stack Reminders
+
+- **UI**: Use shadcn/ui components (already styled)
+- **Styling**: Tailwind with 8pt grid (space-2, space-4, space-6, space-8)
+- **State**: React hooks only (no Redux for MVP)
+- **API**: @fal-ai/serverless-client
+- **Testing**: Vitest but only 2-3 critical tests
+- **Logging**: Use our simple logger (lib/logger.ts)
+
+### Phase 1 MVP Scope (COMPLETED ✅)
+
+- [x] Single model support (SDXL-Lightning)
+- [x] Basic prompt input
+- [x] Generate button
+- [x] Display image result
+- [x] API key management
+- [x] Simple error handling
+
+### What NOT to Build (YAGNI)
+
+❌ Multiple model support (Phase 2)
+❌ History/gallery (Phase 2)
+❌ Parameter presets (Phase 2)
+❌ Perfect error handling
+❌ Analytics
+❌ User accounts
+❌ Backend API
+
+## Code Standards for DarkCanvas
+
+### Quick Quality Checks
+
+- [ ] Works with SDXL-Lightning model
+- [ ] Handles missing API key
+- [ ] Shows loading state during generation
+- [ ] Displays errors to user
+- [ ] Uses 8pt grid spacing
+
+### Simplicity Rules
+
+```typescript
+// YES - Simple and works
+const generateImage = async (prompt: string) => {
+  log.info("Generating image", { prompt });
+  return await fal.generate(prompt);
+};
+
+// NO - Over-engineered for MVP
+class ImageGenerationService {
+  constructor(private strategy: GenerationStrategy) {}
+  // ... 100 lines of abstraction
+}
+```
+
+### Component Patterns
+
+```tsx
+// Use shadcn/ui components directly
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+// Keep components simple
+export function GenerateButton({ onClick, loading }: Props) {
+  return (
+    <Button
+      onClick={onClick}
+      disabled={loading}
+      variant="destructive" // Horror theme!
+      className="w-full"
+    >
+      {loading ? <Loader2 className="animate-spin" /> : <Skull />}
+      Generate Nightmare
+    </Button>
+  );
+}
+```
+
+## Working Practices
+
+### Daily Checklist
+
+1. **Morning**: Check if Fal.ai API still works
+2. **Coding**: Ship one feature completely
+3. **Evening**: Deploy to Vercel/Netlify
+4. **Rule**: If it's not deployed, it doesn't exist
+
+### Testing Approach
+
+```typescript
+// Only test what breaks in production
+describe("Critical Paths", () => {
+  test("API key storage", () => {
+    // User WILL lose their key if this breaks
+  });
+
+  test("Generation error handling", () => {
+    // User WILL see white screen if this breaks
+  });
+});
+
+// Skip these for MVP:
+// - Component rendering
+// - Style tests
+// - Edge cases that won't happen
+```
+
+### When Stuck
+
+1. Can this wait until Phase 2?
+2. What's the simplest thing that works?
+3. Would console.log solve this faster than complex debugging?
+4. Ship it broken (but working) vs perfect (but not shipped)
+
+## Anti-Patterns to Avoid
+
+**NEVER in Phase 1:**
+
+- Create abstract base classes
+- Add "clever" TypeScript generics
+- Build for "future scale"
+- Add dependencies beyond PRD tech stack
+- Spend >2 hours on any single feature
+- Write documentation beyond code comments
+
+**Red Flags You're Over-Engineering:**
+
+- File has >100 lines
+- Component has >3 levels of nesting
+- You're creating a "system" or "framework"
+- You're thinking about "other users"
+- You haven't committed in 2+ hours
+
+## Git Workflow
+
+```bash
+# Simple commits, often
+git add .
+git commit -m "feat: generate button works"
+git push
+
+# Not this
+git commit -m "feat: implement abstract generation service with strategy pattern and dependency injection for future extensibility"
+```
+
+## Remember for DarkCanvas
+
+1. **One model, one user (you), one goal (generate images)**
+2. **Deploy daily** - If it's not live, it's not real
+3. **Phase 1 = 1 week** - Cut scope, not corners
+4. **Use what exists** - shadcn/ui has the components you need
+5. **Horror aesthetic is secondary** - Working is primary
+
+## Quick Command Reference
+
+```bash
+# Start dev
+npm run dev
+
+# Run critical tests only
+npm test critical/
+
+# Quick deploy check
+npm run build && npm run preview
+
+# When context gets messy
+/clear
+```
+
+---
+
+_Project: DarkCanvas_
+_Goal: Ship MVP in 1 week_
+_Current Phase: 1 (COMPLETED ✅) - Ready for Phase 2 or Deployment_
+_Updated: September 16, 2025_
+_Status: Fully functional MVP with shadcn/ui default theme_
