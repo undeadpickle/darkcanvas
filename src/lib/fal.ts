@@ -188,6 +188,15 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
       input.image_urls = [request.sourceImage.url];
     }
 
+    // Add WAN v2.2 specific parameters (required for proper operation)
+    if (request.modelId.includes('wan/v2.2')) {
+      input.guidance_scale = 3.5;
+      input.guidance_scale_2 = 4;
+      input.shift = 2;
+      input.acceleration = "regular";
+      input.num_inference_steps = 27; // WAN needs higher steps than default 4
+    }
+
     // Add optional parameters
     if (request.imageSize) {
       input.image_size = request.imageSize;
@@ -195,7 +204,8 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
     if (request.numImages) {
       input.num_images = request.numImages;
     }
-    if (request.numInferenceSteps) {
+    if (request.numInferenceSteps && !request.modelId.includes('wan/v2.2')) {
+      // Only apply custom inference steps for non-WAN models
       input.num_inference_steps = request.numInferenceSteps;
     }
 

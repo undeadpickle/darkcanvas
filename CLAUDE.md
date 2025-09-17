@@ -243,6 +243,32 @@ describe("Critical Paths", () => {
 3. Would console.log solve this faster than complex debugging?
 4. Ship it broken (but working) vs perfect (but not shipped)
 
+## 🔍 Research & Integration Best Practices
+
+### Adding New Fal.ai Models
+
+**ALWAYS get accurate pricing before adding models.**
+
+1. **Get Pricing**: Navigate to `https://fal.ai/models/[model-id]` with Playwright
+2. **Look for**: "Your request will cost $X per image" text
+3. **Update models.ts** with exact format: `"Cost level ~$0.XX/image"`
+4. **Test API**: Verify the model works and check for special parameters
+
+**Cost Format Examples:**
+- `"Free ~$0/image"` (SDXL Lightning)
+- `"Low cost ~$0.03/image"` (SeedDream)
+- `"Medium cost ~$0.05/image"` (WAN v2.2)
+- `"Higher cost ~$0.039/image"` (Nano-Banana)
+
+### Browser Automation
+
+Use Playwright for all browser research:
+
+```bash
+mcp__playwright__browser_navigate
+mcp__playwright__browser_snapshot
+```
+
 ## Anti-Patterns to Avoid
 
 **NEVER in Phase 1:**

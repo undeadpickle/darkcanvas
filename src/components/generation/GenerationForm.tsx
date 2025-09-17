@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { generateImage, generateImageFromImage, isConfigured } from '@/lib/fal';
-import { getModelsByType, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/lib/models';
+import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/lib/models';
 import { ImageUpload } from './ImageUpload';
 import { log } from '@/lib/logger';
 import type { ImageGeneration, GenerationType, SourceImage } from '@/types';
@@ -27,6 +27,9 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
 
   // Get available models for the current generation type
   const availableModels = getModelsByType(generationType);
+
+  // Get the currently selected model info
+  const currentModel = getModelById(selectedModel);
 
   // Handle generation type change
   const handleGenerationTypeChange = (type: GenerationType) => {
@@ -222,16 +225,16 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
             <SelectContent>
               {availableModels.map((model) => (
                 <SelectItem key={model.id} value={model.id}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{model.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {model.description} • {model.costEstimate}
-                    </span>
-                  </div>
+                  <span className="font-medium">{model.name}</span>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {currentModel && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {currentModel.description} • {currentModel.costEstimate}
+            </p>
+          )}
         </div>
 
         {/* Aspect Ratio Selector */}

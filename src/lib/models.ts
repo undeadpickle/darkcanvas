@@ -18,7 +18,7 @@ export const TEXT_TO_IMAGE_MODELS: ModelConfig[] = [
     id: "fal-ai/fast-lightning-sdxl",
     name: "SDXL-Lightning",
     description: "Fast and cheap - great for testing",
-    costEstimate: "~$0.003",
+    costEstimate: "Free ~$0/image",
     generationType: "text-to-image",
     inputFormat: "image_url" // Not used for T2I
   },
@@ -26,7 +26,7 @@ export const TEXT_TO_IMAGE_MODELS: ModelConfig[] = [
     id: "fal-ai/bytedance/seedream/v4/text-to-image",
     name: "SeedDream v4",
     description: "Higher quality generation",
-    costEstimate: "~$0.01+",
+    costEstimate: "Low cost ~$0.03/image",
     generationType: "text-to-image",
     inputFormat: "image_url" // Not used for T2I
   },
@@ -34,7 +34,7 @@ export const TEXT_TO_IMAGE_MODELS: ModelConfig[] = [
     id: "fal-ai/wan/v2.2-a14b/text-to-image/lora",
     name: "WAN v2.2 LoRA",
     description: "Style variations and artistic effects",
-    costEstimate: "~$0.01+",
+    costEstimate: "Medium cost ~$0.05/image",
     generationType: "text-to-image",
     inputFormat: "image_url" // Not used for T2I
   }
@@ -46,7 +46,7 @@ export const IMAGE_TO_IMAGE_MODELS: ModelConfig[] = [
     id: "fal-ai/bytedance/seedream/v4/edit",
     name: "SeedDream v4 Edit",
     description: "High-quality image editing and transformation",
-    costEstimate: "~$0.01+",
+    costEstimate: "Low cost ~$0.03/image",
     generationType: "image-to-image",
     inputFormat: "image_urls"
   },
@@ -54,7 +54,7 @@ export const IMAGE_TO_IMAGE_MODELS: ModelConfig[] = [
     id: "fal-ai/wan/v2.2-a14b/image-to-image",
     name: "WAN v2.2 Image-to-Image",
     description: "Style transfer and image transformation",
-    costEstimate: "~$0.01+",
+    costEstimate: "Medium cost ~$0.05/image",
     generationType: "image-to-image",
     inputFormat: "image_url"
   },
@@ -62,7 +62,7 @@ export const IMAGE_TO_IMAGE_MODELS: ModelConfig[] = [
     id: "fal-ai/nano-banana/edit",
     name: "Nano-Banana Edit",
     description: "Gemini-powered image editing",
-    costEstimate: "~$0.039",
+    costEstimate: "Higher cost ~$0.039/image",
     generationType: "image-to-image",
     inputFormat: "image_urls"
   }
