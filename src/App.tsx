@@ -7,10 +7,11 @@ import { ImageDisplay } from './components/generation/ImageDisplay';
 import { VideoDisplay } from './components/generation/VideoDisplay';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
-import type { ImageGeneration } from './types';
+import type { ImageGeneration, GeneratedImage } from './types';
 
 function App() {
   const [currentGeneration, setCurrentGeneration] = useState<ImageGeneration | null>(null);
+  const [externalSourceImage, setExternalSourceImage] = useState<GeneratedImage | null>(null);
 
   useEffect(() => {
     log.info('DarkCanvas app initialized');
@@ -26,6 +27,14 @@ function App() {
 
   const handleGeneration = (generation: ImageGeneration) => {
     setCurrentGeneration(generation);
+  };
+
+  const handleUseAsSource = (image: GeneratedImage) => {
+    setExternalSourceImage(image);
+    log.info('Image selected for use as source', {
+      width: image.width,
+      height: image.height
+    });
   };
 
   return (
@@ -68,14 +77,21 @@ function App() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <GenerationForm onGeneration={handleGeneration} />
+                      <GenerationForm
+                        onGeneration={handleGeneration}
+                        externalSourceImage={externalSourceImage}
+                        onExternalSourceImageProcessed={() => setExternalSourceImage(null)}
+                      />
                     </CardContent>
                   </Card>
                 </div>
 
                 {/* Image Display */}
                 <div>
-                  <ImageDisplay generation={currentGeneration} />
+                  <ImageDisplay
+                    generation={currentGeneration}
+                    onUseAsSource={handleUseAsSource}
+                  />
                 </div>
               </div>
             </TabsContent>

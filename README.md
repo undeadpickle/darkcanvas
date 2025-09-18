@@ -87,6 +87,7 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 - ✅ File upload with preview and validation (PNG, JPG, WebP up to 15MB with automatic compression)
 - ✅ Automatic aspect ratio detection - aspect ratio selector updates to match uploaded image dimensions
 - ✅ Same aspect ratio support as text-to-image
+- ✅ **Use generated image as source** - "Use in Image-to-Image" button allows seamless iteration
 
 ### Core Features
 - ✅ Consolidated interface with Image/Video tabs

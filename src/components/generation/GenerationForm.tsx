@@ -10,13 +10,15 @@ import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMA
 import { ImageUpload } from './ImageUpload';
 import { OpenAIKeyInput } from './OpenAIKeyInput';
 import { log } from '@/lib/logger';
-import type { ImageGeneration, GenerationType, SourceImage } from '@/types';
+import type { ImageGeneration, GenerationType, SourceImage, GeneratedImage } from '@/types';
 
 interface GenerationFormProps {
   onGeneration: (generation: ImageGeneration) => void;
+  externalSourceImage?: GeneratedImage | null;
+  onExternalSourceImageProcessed?: () => void;
 }
 
-export function GenerationForm({ onGeneration }: GenerationFormProps) {
+export function GenerationForm({ onGeneration, externalSourceImage, onExternalSourceImageProcessed }: GenerationFormProps) {
   const [generationType, setGenerationType] = useState<GenerationType>('text-to-image');
   const [prompt, setPrompt] = useState('');
   const [selectedModel, setSelectedModel] = useState(DEFAULT_TEXT_TO_IMAGE_MODEL.id);
@@ -35,6 +37,38 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
       log.info('OpenAI API key loaded from environment');
     }
   }, []);
+
+  // Handle external source image (from "Use in Image-to-Image" button)
+  useEffect(() => {
+    if (externalSourceImage) {
+      // Switch to image-to-image mode
+      setGenerationType('image-to-image');
+      setSelectedModel(DEFAULT_IMAGE_TO_IMAGE_MODEL.id);
+
+      // Convert GeneratedImage to SourceImage
+      const sourceImageFromGenerated: SourceImage = {
+        url: externalSourceImage.url,
+        width: externalSourceImage.width,
+        height: externalSourceImage.height,
+        filename: `generated-${Date.now()}.png`
+      };
+
+      // Set as source image
+      setSourceImage(sourceImageFromGenerated);
+
+      // Auto-detect aspect ratio
+      const detectedRatio = detectAspectRatio(externalSourceImage.width, externalSourceImage.height);
+      setSelectedAspectRatio(detectedRatio.value);
+
+      log.info('External source image processed', {
+        dimensions: `${externalSourceImage.width}x${externalSourceImage.height}`,
+        detectedRatio: detectedRatio.name
+      });
+
+      // Notify that the external source image has been processed
+      onExternalSourceImageProcessed?.();
+    }
+  }, [externalSourceImage, onExternalSourceImageProcessed]);
 
   // Get available models for the current generation type
   const availableModels = getModelsByType(generationType);

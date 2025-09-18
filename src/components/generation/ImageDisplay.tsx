@@ -1,13 +1,14 @@
-import { Download, Skull, Loader2, AlertCircle } from 'lucide-react';
+import { Download, Skull, Loader2, AlertCircle, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { ImageGeneration } from '@/types';
+import type { ImageGeneration, GeneratedImage } from '@/types';
 
 interface ImageDisplayProps {
   generation: ImageGeneration | null;
+  onUseAsSource?: (image: GeneratedImage) => void;
 }
 
-export function ImageDisplay({ generation }: ImageDisplayProps) {
+export function ImageDisplay({ generation, onUseAsSource }: ImageDisplayProps) {
   const handleDownload = async (imageUrl: string) => {
     try {
       const response = await fetch(imageUrl);
@@ -108,15 +109,26 @@ export function ImageDisplay({ generation }: ImageDisplayProps) {
                     )}
                   </div>
 
-                  <Button
-                    onClick={() => handleDownload(image.url)}
-                    variant="secondary"
-                    size="sm"
-                    className="flex-shrink-0"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </Button>
+                  <div className="flex gap-2 flex-shrink-0">
+                    {onUseAsSource && (
+                      <Button
+                        onClick={() => onUseAsSource(image)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <ImageIcon className="w-4 h-4 mr-2" />
+                        Use in Image-to-Image
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => handleDownload(image.url)}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}

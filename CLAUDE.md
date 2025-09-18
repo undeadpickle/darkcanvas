@@ -160,6 +160,13 @@ git worktree add ../darkcanvas-generation feature/generation
 - [x] Added Video placeholder tab for future development
 - [x] Fixed build errors in image response handling logic
 
+### Phase 3.1: Use Generated Images as Source (COMPLETED ✅)
+
+- [x] "Use in Image-to-Image" button on generated image results
+- [x] Automatic mode switching from text-to-image to image-to-image
+- [x] Seamless image iteration workflow for creative exploration
+- [x] Auto-population of source image with aspect ratio detection
+
 ### What NOT to Build (YAGNI)
 
 ❌ History/gallery (Phase 3)
@@ -315,7 +322,7 @@ npm run build && npm run preview
 
 _Project: DarkCanvas_
 _Goal: Ship MVP in 1 week_
-_Current Phase: 3.1 (COMPLETED ✅) - Added Automatic Aspect Ratio Detection_
+_Current Phase: 3.1 (COMPLETED ✅) - Use Generated Images as Source Feature_
 _Updated: September 18, 2025_
-_Status: 5 total models (3 text-to-image + 2 image-to-image) including OpenAI BYOK models - automatic aspect ratio detection for I2I mode_
+_Status: 5 total models (3 text-to-image + 2 image-to-image) including OpenAI BYOK models - seamless image iteration workflow_
 _GitHub: https://github.com/undeadpickle/darkcanvas_
