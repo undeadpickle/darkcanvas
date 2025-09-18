@@ -1,20 +1,24 @@
 # PRD: DarkCanvas - Fal.ai Model Interface Web App
 
 ## 🎯 Goal & Vision
+
 Build a simple web interface to experiment with multiple fal.ai image generation models, allowing easy parameter tweaking and prompt testing for creative projects (especially horror/dark art).
 
 ## 🏛️ Development Philosophy
+
 **Lightweight MVP following KISS, YAGNI, and DRY principles**
-*See CLAUDE.md for detailed development practices*
+_See CLAUDE.md for detailed development practices_
 
 ## 🎭 User Story
-*"As a creative developer, I want a simple web app where I can quickly test different fal.ai models with various parameters, so I can iterate on prompts and compare results without dealing with API code each time."*
+
+_"As a creative developer, I want a simple web app where I can quickly test different fal.ai models with various parameters, so I can iterate on prompts and compare results without dealing with API code each time."_
 
 ## ✨ Core Features
 
 ### MVP (Phase 1)
+
 1. **Model Selection** - Dropdown to choose between supported models
-2. **Prompt Input** - Text area for image prompts  
+2. **Prompt Input** - Text area for image prompts
 3. **Basic Parameters** - Common settings like image size, steps, guidance
 4. **Safety Configuration** - Safety checker disabled by default for unrestricted generation
 5. **Generate Button** - Trigger image creation
@@ -22,6 +26,7 @@ Build a simple web interface to experiment with multiple fal.ai image generation
 7. **API Key Input** - Secure input for Fal.ai API key
 
 ### Nice-to-Have (Phase 2)
+
 - **History** - Save recent generations locally
 - **Parameter Presets** - Save/load common configurations
 - **Batch Generation** - Multiple images at once
@@ -30,6 +35,7 @@ Build a simple web interface to experiment with multiple fal.ai image generation
 ## 🏗️ Technical Architecture
 
 ### Domain Model
+
 ```typescript
 // Core entities
 interface ImageGeneration {
@@ -38,7 +44,7 @@ interface ImageGeneration {
   prompt: string;
   parameters: ModelParameters;
   result?: GeneratedImage;
-  status: 'pending' | 'generating' | 'complete' | 'error';
+  status: "pending" | "generating" | "complete" | "error";
   createdAt: Date;
 }
 
@@ -60,6 +66,7 @@ interface FalModel {
 ```
 
 ### Tech Stack
+
 - **Frontend**: React + TypeScript (Vite)
 - **UI Components**: shadcn/ui (Radix UI + Tailwind CSS)
 - **Icons**: Lucide React
@@ -72,6 +79,7 @@ interface FalModel {
 - **API Verification**: ref MCP for current Fal.ai docs
 
 ### API Key Management (SECURITY UPDATED 🔒)
+
 - **Environment Variables**: `VITE_FAL_API_KEY` in `.env` file (primary method)
 - **Security First**: No browser storage, no XSS exposure
 - **Git Safe**: `.env` in `.gitignore`, `.env.example` for setup
@@ -79,12 +87,8 @@ interface FalModel {
 
 ## 🎨 Design Direction
 
-### Visual Theme
-- **Dark Theme**: Black/dark gray background with red/purple accents
-- **Horror Aesthetic**: Gothic fonts, subtle shadows, eerie color palette
-- **Clean Interface**: Don't let the theme interfere with usability
-
 ### Design System
+
 - **8pt Grid**: All spacing uses multiples of 8px (0.5rem)
   - Micro: 8px (space-2)
   - Small: 16px (space-4)
@@ -96,6 +100,7 @@ interface FalModel {
 - **Responsive Breakpoints**: sm:640px, md:768px, lg:1024px, xl:1280px
 
 ### shadcn Components to Use
+
 - **Form Controls**: Input, Textarea, Select, Slider, Switch
 - **Layout**: Card, Separator, ScrollArea
 - **Feedback**: Button, Badge, Alert, Skeleton, Progress
@@ -105,6 +110,7 @@ interface FalModel {
 ## 📋 User Interface
 
 ### Main Screen Layout
+
 ```
 ┌─────────────────────────────────────┐
 │ 🎃 DarkCanvas                       │
@@ -120,25 +126,28 @@ interface FalModel {
 ```
 
 ### Component Approach
+
 - Use shadcn/ui components directly (Card, Button, Input, etc.)
 - Apply 8pt grid consistently (p-8, space-y-6, etc.)
-- Dark theme with red/purple accents via Tailwind
-- *See CLAUDE.md for component patterns*
+- _See CLAUDE.md for component patterns_
 
 ## 🚀 Implementation Phases
 
 ### Phase 1: Foundation & Basic Generation (MVP)
+
 **Goal**: Ship working image generator in 1 week
+
 - Verify Fal.ai API with ref MCP
 - Basic project setup (Vite, React, TypeScript, shadcn/ui)
 - Single model support (SDXL-Lightning - cheapest)
 - Core UI: prompt input, generate button, image display
 - API key management with secure environment variables
 - Simple error handling and loading states
-- Deploy to production (Vercel/Netlify)
 
 ### Phase 2: Multi-Model Support
+
 **Goal**: Support all target models with their specific parameters
+
 - Model selector with shadcn Select and Badge components
 - Model-specific parameter controls with shadcn form components
 - Parameter validation with shadcn form states
@@ -146,7 +155,9 @@ interface FalModel {
 - Model info with shadcn Tooltip
 
 ### Phase 3: Enhanced Parameters & UX
+
 **Goal**: Make parameter tweaking smooth and intuitive
+
 - Advanced controls with shadcn Slider, NumberInput
 - Parameter presets with shadcn DropdownMenu
 - Real-time validation feedback
@@ -154,7 +165,9 @@ interface FalModel {
 - Toast notifications for actions
 
 ### Phase 4: History & Persistence
+
 **Goal**: Remember and manage previous generations
+
 - History gallery with shadcn ScrollArea
 - Image cards with shadcn AspectRatio
 - Actions with shadcn ContextMenu
@@ -162,7 +175,9 @@ interface FalModel {
 - Cost display with shadcn Badge
 
 ### Phase 5: Polish & Optimization
+
 **Goal**: Production-ready with great UX
+
 - Responsive grid refinements
 - Keyboard shortcuts with shadcn Command
 - Batch UI with shadcn Tabs
@@ -170,31 +185,38 @@ interface FalModel {
 - Loading optimizations
 
 ## 🤖 Supported Models
-*Verify current endpoints/pricing with ref MCP before implementing*
+
+_Verify current endpoints/pricing with ref MCP before implementing_
 
 ### Primary Models
+
 1. **SDXL-Lightning** - Cheap test model (~$0.003/image) - Phase 1
 2. **fal-ai/flux/srpo** - High-quality flux variant - Phase 2
 3. **fal-ai/bytedance/seedream/v4/text-to-image** - Advanced - Phase 2
 4. **fal-ai/nano-banana** - Fast, lightweight option - Phase 2
 
 ### Model-Specific Parameters
+
 - Each model will have its own parameter schema
 - Common parameters (safety, size) shared across models
 - Model-specific controls shown/hidden based on selection
 
 ## 📊 Success Metrics
+
 **MVP (Phase 1)**: Live in production within 1 week, generates images successfully
 **Future (Phase 2+)**: Multi-model support, cost tracking, personal usage
 
 ## ⚠️ Out of Scope for MVP
-*See CLAUDE.md for detailed anti-patterns*
+
+_See CLAUDE.md for detailed anti-patterns_
+
 - Multiple models, authentication, database, CI/CD
 - Perfect test coverage, complex state management
 - Analytics, monitoring, PWA features
 - Focus: One model, one user, one goal
 
 ## 📁 Project Structure
+
 ```
 darkcanvas/
 ├── src/
@@ -217,6 +239,7 @@ darkcanvas/
 ```
 
 ## 🎯 Next Steps
+
 1. Initialize: `npm create vite@latest darkcanvas -- --template react-ts`
 2. Add shadcn/ui and configure dark theme
 3. Verify Fal.ai API docs with ref MCP
@@ -224,16 +247,18 @@ darkcanvas/
 5. Deploy to Vercel/Netlify
 6. Iterate based on actual usage
 
-*See CLAUDE.md for detailed development workflow*
+_See CLAUDE.md for detailed development workflow_
 
 ## 🎯 Status Update
 
-**Phase 1 MVP: COMPLETED ✅**
+**Phase 3.0: COMPLETED ✅**
 
-- ✅ All core features implemented and working
-- ✅ Security upgraded to environment variables
-- ✅ Clean shadcn/ui default theme for accessibility
-- ✅ GitHub repository: https://github.com/undeadpickle/darkcanvas
-- ✅ Ready for deployment to production
+- ✅ **Phase 1 MVP**: Core features, API key management, single model support
+- ✅ **Phase 2**: Multiple models (4 total), aspect ratios, improved UI
+- ✅ **Phase 2.5**: Image-to-image generation with 2 I2I models
+- ✅ **Phase 3.0**: Consolidated UI with Image/Video tabs, build stability fixes
+- ✅ **Models**: 5 total (3 text-to-image + 2 image-to-image) including OpenAI BYOK models
+- ✅ **Security**: Environment variable API key management
+- ✅ **Production Ready**: Clean build, optimized bundle, stable error handling
 
-Ready for Phase 2 or production deployment! 🎨🌑
+Current status: Feature-complete MVP ready for production! 🎨🌑

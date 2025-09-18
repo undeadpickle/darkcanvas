@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateImage, generateImageFromImage, isConfigured } from '@/lib/fal';
 import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/lib/models';
 import { ImageUpload } from './ImageUpload';
+import { OpenAIKeyInput } from './OpenAIKeyInput';
 import { log } from '@/lib/logger';
 import type { ImageGeneration, GenerationType, SourceImage } from '@/types';
 
@@ -22,6 +23,7 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
   const [selectedAspectRatio, setSelectedAspectRatio] = useState(DEFAULT_ASPECT_RATIO.value);
   const [sourceImage, setSourceImage] = useState<SourceImage | null>(null);
   const [strength, setStrength] = useState([0.8]); // Slider expects array
+  const [openaiApiKey, setOpenaiApiKey] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +61,18 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
     if (!isConfigured()) {
       setError('Please set VITE_FAL_API_KEY in your .env file');
       return;
+    }
+
+    // Check for OpenAI key if BYOK model is selected
+    if (currentModel?.requiresOpenAIKey) {
+      if (!openaiApiKey.trim()) {
+        setError('Please provide your OpenAI API key for this BYOK model');
+        return;
+      }
+      if (!openaiApiKey.startsWith('sk-')) {
+        setError('Invalid OpenAI API key format. Keys should start with "sk-"');
+        return;
+      }
     }
 
     setIsGenerating(true);
@@ -99,6 +113,7 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
           enableSafetyChecker: false,
           numInferenceSteps: 4,
           imageFormat: 'png',
+          openaiApiKey: currentModel?.requiresOpenAIKey ? openaiApiKey : undefined,
         });
       } else {
         // Image-to-image generation
@@ -116,6 +131,7 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
           enableSafetyChecker: false,
           numInferenceSteps: 4,
           imageFormat: 'png',
+          openaiApiKey: currentModel?.requiresOpenAIKey ? openaiApiKey : undefined,
         });
       }
 
@@ -124,6 +140,7 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
         images: result.images,
         status: 'complete',
         seed: result.seed,
+        usage: result.usage, // Include usage data for BYOK models
       };
 
       onGeneration(completedGeneration);
@@ -337,6 +354,15 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
             className="resize-none"
           />
         </div>
+
+        {/* OpenAI Key Input (for BYOK models) */}
+        {currentModel?.requiresOpenAIKey && (
+          <OpenAIKeyInput
+            value={openaiApiKey}
+            onChange={setOpenaiApiKey}
+            required={true}
+          />
+        )}
 
         {/* Error Display */}
         {error && (

@@ -25,10 +25,22 @@ export interface ImageGeneration {
   error?: string;
   seed?: number;
   strength?: number; // For image-to-image transformation intensity
+  usage?: OpenAIUsage; // For BYOK models
   createdAt: Date;
+}
+
+export interface OpenAIUsage {
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  input_tokens_details?: {
+    image_tokens: number;
+    text_tokens: number;
+  };
 }
 
 export interface GenerationFormData {
   prompt: string;
   apiKey?: string;
+  openaiApiKey?: string; // For BYOK models
 }

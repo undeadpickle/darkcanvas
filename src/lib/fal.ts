@@ -1,7 +1,7 @@
 import * as fal from "@fal-ai/serverless-client";
 import { log } from "./logger";
 import { DEFAULT_TEXT_TO_IMAGE_MODEL, getModelById } from "./models";
-import type { SourceImage } from "@/types";
+import type { SourceImage, OpenAIUsage } from "@/types";
 
 // Get API key from environment variable
 function getApiKey(): string {
@@ -31,6 +31,7 @@ export interface GenerationRequest {
   enableSafetyChecker?: boolean;
   numInferenceSteps?: number;
   imageFormat?: string;
+  openaiApiKey?: string; // For BYOK models
 }
 
 export interface ImageToImageRequest {
@@ -43,6 +44,7 @@ export interface ImageToImageRequest {
   enableSafetyChecker?: boolean;
   numInferenceSteps?: number;
   imageFormat?: string;
+  openaiApiKey?: string; // For BYOK models
 }
 
 export interface GenerationResult {
@@ -53,6 +55,7 @@ export interface GenerationResult {
   }>;
   timings: Record<string, number>;
   seed: number;
+  usage?: OpenAIUsage; // For BYOK models
 }
 
 // Generate image using specified model
@@ -68,8 +71,10 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
   });
 
   try {
+    log.info('Starting generateImage function', { modelId, hasOpenAIKey: !!request.openaiApiKey });
+
     // Prepare input with base parameters
-    const input: Record<string, unknown> = {
+    let input: Record<string, unknown> = {
       prompt: request.prompt,
       image_size: request.imageSize || "square_hd",
       num_images: request.numImages || 1,
@@ -86,50 +91,102 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
       input.guidance_scale_2 = 4;
       input.shift = 2;
       input.acceleration = "regular";
+    } else if (modelId.includes('gpt-image-1')) {
+      console.log('🔥 GPT IMAGE 1 DETECTED:', modelId);
+
+      // GPT Image 1 specific parameters
+      if (!request.openaiApiKey) {
+        throw new Error('OpenAI API key is required for GPT Image 1 models');
+      }
+
+      console.log('🔑 OpenAI Key provided:', request.openaiApiKey ? 'YES' : 'NO');
+      console.log('🔑 OpenAI Key length:', request.openaiApiKey?.length);
+      console.log('🔑 OpenAI Key starts with sk-:', request.openaiApiKey?.startsWith('sk-'));
+      console.log('📝 Prompt:', request.prompt);
+      console.log('📝 Prompt length:', request.prompt?.length);
+
+      // Validate OpenAI key format more strictly
+      if (!request.openaiApiKey?.startsWith('sk-') || request.openaiApiKey.length < 40) {
+        throw new Error('Invalid OpenAI API key format. Key must start with "sk-" and be at least 40 characters long.');
+      }
+
+      // Use absolute minimum required parameters only
+      input = {
+        prompt: request.prompt.trim(),
+        openai_api_key: request.openaiApiKey.trim()
+      };
+
+      console.log('📦 Final GPT input:', JSON.stringify(input, null, 2));
     } else {
       // For other models (SDXL-Lightning, SeedDream), use fast settings
       input.num_inference_steps = request.numInferenceSteps || 4;
     }
 
+    // Log the exact input being sent to fal.ai for debugging
+    console.log('🚀 SENDING TO FAL.AI:', {
+      modelId,
+      input: JSON.stringify(input, null, 2)
+    });
+
+    console.log('🎯 Attempting fal.subscribe...');
+
     const result = await fal.subscribe(modelId, {
       input,
       logs: true,
       onQueueUpdate: (update) => {
-        log.info('Queue update', update);
+        console.log('📊 Queue update:', update);
       },
     });
 
+    console.log('✅ fal.subscribe completed:', result);
+
     // Log raw result to understand different model response structures
-    log.info('Raw generation result', { result, model: modelId });
+    console.log('📋 Raw result structure:', JSON.stringify(result, null, 2));
 
     const typedResult = result as GenerationResult;
 
     // Handle different response structures from different models
     if (!typedResult.images || !Array.isArray(typedResult.images)) {
-      log.info('Converting response structure', {
-        model: modelId,
-        hasImages: !!typedResult.images,
-        imagesType: typeof typedResult.images
-      });
+      console.log('🔧 Converting response structure for', modelId);
+      console.log('🔧 Original images field:', typedResult.images);
+      console.log('🔧 Images type:', typeof typedResult.images);
 
       // Try to find images in different possible locations
       const resultAny = result as Record<string, unknown>;
       let images: Array<{ url: string; width: number; height: number }> = [];
 
-      if (resultAny.image) {
-        // Handle single image object (WAN model format)
-        if (typeof resultAny.image === 'object' && resultAny.image !== null && 'url' in resultAny.image) {
-          const imageObj = resultAny.image as Record<string, unknown>;
-          images = [{
-            url: imageObj.url as string,
-            width: (imageObj.width as number) || 1024,
-            height: (imageObj.height as number) || 1024
-          }];
-        } else if (typeof resultAny.image === 'string') {
-          // Handle single image URL string
-          images = [{ url: resultAny.image, width: 1024, height: 1024 }];
+      // Special handling for GPT models
+      if (modelId.includes('gpt-image-1')) {
+        console.log('🎨 Processing GPT Image 1 response');
+
+        // GPT models should return { images: [{ url: "..." }], usage: {...} }
+        if (resultAny.images && Array.isArray(resultAny.images)) {
+          console.log('✅ Found GPT images array:', resultAny.images);
+          images = resultAny.images.map((img: any) => ({
+            url: img.url || img,
+            width: img.width || 1024,
+            height: img.height || 1024
+          }));
+        } else {
+          console.log('❌ GPT images not found in expected format');
+          console.log('🔍 Available fields:', Object.keys(resultAny));
         }
-      } else if (resultAny.output) {
+      } else {
+        // Handle other model formats
+        if (resultAny.image) {
+          // Handle single image object (WAN model format)
+          if (typeof resultAny.image === 'object' && resultAny.image !== null && 'url' in resultAny.image) {
+            const imageObj = resultAny.image as Record<string, unknown>;
+            images = [{
+              url: imageObj.url as string,
+              width: (imageObj.width as number) || 1024,
+              height: (imageObj.height as number) || 1024
+            }];
+          } else if (typeof resultAny.image === 'string') {
+            // Handle single image URL string
+            images = [{ url: resultAny.image, width: 1024, height: 1024 }];
+          }
+        } else if (resultAny.output) {
         // Handle output field
         const output = resultAny.output;
         if (Array.isArray(output)) {
@@ -139,9 +196,10 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
         } else if (typeof output === 'string') {
           images = [{ url: output, width: 1024, height: 1024 }];
         }
-      } else if (resultAny.url) {
-        // Handle direct URL field
-        images = [{ url: resultAny.url as string, width: 1024, height: 1024 }];
+        } else if (resultAny.url) {
+          // Handle direct URL field
+          images = [{ url: resultAny.url as string, width: 1024, height: 1024 }];
+        }
       }
 
       if (images.length > 0) {
@@ -152,15 +210,45 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
       }
     }
 
+    // Extract usage information for GPT models
+    if (modelId.includes('gpt-image-1')) {
+      const resultAny = result as Record<string, unknown>;
+      if (resultAny.usage) {
+        typedResult.usage = resultAny.usage as OpenAIUsage;
+        log.info('GPT model usage', { usage: typedResult.usage, model: modelId });
+      }
+    }
+
     log.info('Image generation completed', {
       imageCount: typedResult.images?.length || 0,
       seed: typedResult.seed,
-      model: modelId
+      model: modelId,
+      hasUsage: !!typedResult.usage
     });
 
     return typedResult;
   } catch (error) {
-    log.error('Image generation failed', { model: modelId, error });
+    console.log('❌ Error in generateImage:', error);
+
+    // Log more detailed error information
+    log.error('Image generation failed', {
+      model: modelId,
+      error: error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined
+    });
+
+    // For GPT models, the error might be in result parsing, not generation
+    if (modelId.includes('gpt-image-1')) {
+      console.log('🔍 GPT model error - might be result parsing issue');
+
+      // Try to extract any partial result data if available
+      const errorAny = error as any;
+      if (errorAny.data || errorAny.result) {
+        console.log('📊 Error contains data:', errorAny.data || errorAny.result);
+      }
+    }
+
     throw error;
   }
 }
@@ -203,24 +291,52 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
       input.image_urls = [request.sourceImage.url];
     }
 
-    // Add WAN v2.2 specific parameters (required for proper operation)
+    // Add model-specific parameters
     if (request.modelId.includes('wan/v2.2')) {
+      // WAN v2.2 specific parameters (required for proper operation)
       input.guidance_scale = 3.5;
       input.guidance_scale_2 = 4;
       input.shift = 2;
       input.acceleration = "regular";
       input.num_inference_steps = 27; // WAN needs higher steps than default 4
+    } else if (request.modelId.includes('gpt-image-1')) {
+      // GPT Image 1 Edit specific parameters
+      if (!request.openaiApiKey) {
+        throw new Error('OpenAI API key is required for GPT Image 1 models');
+      }
+
+      // Map aspect ratios to GPT sizes
+      const gptSizeMap: Record<string, string> = {
+        'square_hd': '1024x1024',
+        'landscape_4_3': '1536x1024',
+        'landscape_16_9': 'auto',
+        'portrait_4_3': '1024x1536',
+        'portrait_16_9': 'auto',
+      };
+
+      // The GPT edit model uses image_urls (array) format
+      // Ensure we use the correct format regardless of what was set earlier
+      if (input.image_url) {
+        delete input.image_url;
+      }
+      input.image_urls = [request.sourceImage.url];
+
+      input.image_size = gptSizeMap[request.imageSize || 'square_hd'] || 'auto';
+      input.num_images = request.numImages || 1;
+      input.quality = 'auto';
+      input.input_fidelity = 'low'; // Default to low for more creative edits
+      input.openai_api_key = request.openaiApiKey;
     }
 
-    // Add optional parameters
-    if (request.imageSize) {
+    // Add optional parameters (only for non-GPT models since GPT has different size mapping)
+    if (request.imageSize && !request.modelId.includes('gpt-image-1')) {
       input.image_size = request.imageSize;
     }
     if (request.numImages) {
       input.num_images = request.numImages;
     }
-    if (request.numInferenceSteps && !request.modelId.includes('wan/v2.2')) {
-      // Only apply custom inference steps for non-WAN models
+    if (request.numInferenceSteps && !request.modelId.includes('wan/v2.2') && !request.modelId.includes('gpt-image-1')) {
+      // Only apply custom inference steps for non-WAN and non-GPT models
       input.num_inference_steps = request.numInferenceSteps;
     }
 
@@ -285,10 +401,20 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
       }
     }
 
+    // Extract usage information for GPT models
+    if (request.modelId.includes('gpt-image-1')) {
+      const resultAny = result as Record<string, unknown>;
+      if (resultAny.usage) {
+        typedResult.usage = resultAny.usage as OpenAIUsage;
+        log.info('GPT model I2I usage', { usage: typedResult.usage, model: request.modelId });
+      }
+    }
+
     log.info('Image-to-image generation completed', {
       imageCount: typedResult.images?.length || 0,
       seed: typedResult.seed,
-      model: request.modelId
+      model: request.modelId,
+      hasUsage: !!typedResult.usage
     });
 
     return typedResult;

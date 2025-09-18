@@ -10,6 +10,7 @@ export interface ModelConfig {
   costEstimate: string;
   generationType: GenerationType;
   inputFormat: 'image_url' | 'image_urls'; // For I2I models
+  requiresOpenAIKey?: boolean; // For BYOK models
 }
 
 // Text-to-Image Models
@@ -29,6 +30,15 @@ export const TEXT_TO_IMAGE_MODELS: ModelConfig[] = [
     costEstimate: "Low cost ~$0.03/image",
     generationType: "text-to-image",
     inputFormat: "image_url" // Not used for T2I
+  },
+  {
+    id: "fal-ai/gpt-image-1/text-to-image/byok",
+    name: "GPT Image 1 (BYOK)",
+    description: "OpenAI's DALL-E - Requires your OpenAI API key",
+    costEstimate: "BYOK - Uses your OpenAI billing",
+    generationType: "text-to-image",
+    inputFormat: "image_url",
+    requiresOpenAIKey: true
   }
 ];
 
@@ -49,6 +59,15 @@ export const IMAGE_TO_IMAGE_MODELS: ModelConfig[] = [
     costEstimate: "Higher cost ~$0.039/image",
     generationType: "image-to-image",
     inputFormat: "image_urls"
+  },
+  {
+    id: "fal-ai/gpt-image-1/edit-image/byok",
+    name: "GPT Image 1 Edit (BYOK)",
+    description: "OpenAI's image editing - Requires your OpenAI API key",
+    costEstimate: "BYOK - Uses your OpenAI billing",
+    generationType: "image-to-image",
+    inputFormat: "image_urls",
+    requiresOpenAIKey: true
   }
 ];
 

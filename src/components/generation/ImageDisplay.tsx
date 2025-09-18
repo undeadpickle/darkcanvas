@@ -97,6 +97,15 @@ export function ImageDisplay({ generation }: ImageDisplayProps) {
                   <div className="text-xs text-muted-foreground space-y-1 flex-1">
                     <p>Size: {image.width || 1024} × {image.height || 1024}</p>
                     {generation.seed && <p>Seed: {generation.seed}</p>}
+                    {generation.usage && (
+                      <div className="pt-1 border-t border-muted">
+                        <p className="font-medium text-orange-600">OpenAI Usage:</p>
+                        <p>Tokens: {generation.usage.total_tokens} ({generation.usage.input_tokens} input + {generation.usage.output_tokens} output)</p>
+                        {generation.usage.input_tokens_details && (
+                          <p>Input: {generation.usage.input_tokens_details.text_tokens} text + {generation.usage.input_tokens_details.image_tokens} image tokens</p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <Button

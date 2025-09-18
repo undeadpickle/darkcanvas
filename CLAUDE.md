@@ -155,6 +155,7 @@ git worktree add ../darkcanvas-generation feature/generation
 - [x] Fixed image upload functionality (replaced shadcn Input with native HTML input)
 - [x] Removed problematic WAN models for better reliability
 - [x] Added Video placeholder tab for future development
+- [x] Fixed build errors in image response handling logic
 
 ### What NOT to Build (YAGNI)
 
@@ -166,14 +167,6 @@ git worktree add ../darkcanvas-generation feature/generation
 ❌ Backend API
 
 ## Code Standards for DarkCanvas
-
-### Quick Quality Checks
-
-- [ ] Works with SDXL-Lightning model
-- [x] Handles missing API key (environment setup guide)
-- [ ] Shows loading state during generation
-- [ ] Displays errors to user
-- [ ] Uses 8pt grid spacing
 
 ### Simplicity Rules
 
@@ -214,15 +207,6 @@ export function GenerateButton({ onClick, loading }: Props) {
 }
 ```
 
-## Working Practices
-
-### Daily Checklist
-
-1. **Morning**: Check if Fal.ai API still works
-2. **Coding**: Ship one feature completely
-3. **Evening**: Deploy to Vercel/Netlify
-4. **Rule**: If it's not deployed, it doesn't exist
-
 ### Testing Approach
 
 ```typescript
@@ -262,6 +246,7 @@ describe("Critical Paths", () => {
 4. **Test API**: Verify the model works and check for special parameters
 
 **Cost Format Examples:**
+
 - `"Free ~$0/image"` (SDXL Lightning)
 - `"Low cost ~$0.03/image"` (SeedDream)
 - `"Medium cost ~$0.05/image"` (WAN v2.2)
@@ -307,14 +292,6 @@ git push
 git commit -m "feat: implement abstract generation service with strategy pattern and dependency injection for future extensibility"
 ```
 
-## Remember for DarkCanvas
-
-1. **One model, one user (you), one goal (generate images)**
-2. **Deploy daily** - If it's not live, it's not real
-3. **Phase 1 = 1 week** - Cut scope, not corners
-4. **Use what exists** - shadcn/ui has the components you need
-5. **Horror aesthetic is secondary** - Working is primary
-
 ## Quick Command Reference
 
 ```bash
@@ -337,5 +314,5 @@ _Project: DarkCanvas_
 _Goal: Ship MVP in 1 week_
 _Current Phase: 3.0 (COMPLETED ✅) - Consolidated UI with Video Placeholder_
 _Updated: September 18, 2025_
-_Status: 4 total models (2 text-to-image + 2 image-to-image) - removed problematic WAN models_
+_Status: 5 total models (3 text-to-image + 2 image-to-image) including OpenAI BYOK models - removed problematic WAN models_
 _GitHub: https://github.com/undeadpickle/darkcanvas_
