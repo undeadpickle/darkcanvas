@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Skull, Loader2, Image as ImageIcon, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateImage, generateImageFromImage, isConfigured } from '@/lib/fal';
 import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/lib/models';
 import { ImageUpload } from './ImageUpload';
@@ -162,18 +162,7 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
   const supportsStrength = selectedModel.includes('wan') && generationType === 'image-to-image';
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader className="text-center">
-        <CardTitle className="flex items-center justify-center space-x-2">
-          <Skull className="w-6 h-6 text-primary" />
-          <span>Generate Image</span>
-        </CardTitle>
-        <CardDescription>
-          Create images with AI - text-to-image or image-to-image
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
+    <div className="space-y-6">
         {/* Configuration Warning */}
         {!isConfiguredState && (
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
@@ -186,111 +175,144 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
           </div>
         )}
 
-        {/* Generation Type Toggle */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">
-            Generation Mode
-          </label>
-          <div className="flex space-x-2">
-            <Button
-              variant={generationType === 'text-to-image' ? 'default' : 'outline'}
-              size="sm"
-              className="flex-1"
-              onClick={() => handleGenerationTypeChange('text-to-image')}
-            >
-              <Type className="w-4 h-4 mr-2" />
-              Text-to-Image
-            </Button>
-            <Button
-              variant={generationType === 'image-to-image' ? 'default' : 'outline'}
-              size="sm"
-              className="flex-1"
-              onClick={() => handleGenerationTypeChange('image-to-image')}
-            >
-              <ImageIcon className="w-4 h-4 mr-2" />
-              Image-to-Image
-            </Button>
-          </div>
-        </div>
+        {/* Generation Mode Tabs */}
+        <Tabs value={generationType} onValueChange={(value) => handleGenerationTypeChange(value as GenerationType)} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="text-to-image" className="flex items-center space-x-2">
+              <Type className="w-4 h-4" />
+              <span>Text-to-Image</span>
+            </TabsTrigger>
+            <TabsTrigger value="image-to-image" className="flex items-center space-x-2">
+              <ImageIcon className="w-4 h-4" />
+              <span>Image-to-Image</span>
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Model Selector */}
-        <div className="space-y-2">
-          <label htmlFor="model" className="text-sm font-medium text-muted-foreground">
-            Model
-          </label>
-          <Select value={selectedModel} onValueChange={setSelectedModel}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a model" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableModels.map((model) => (
-                <SelectItem key={model.id} value={model.id}>
-                  <span className="font-medium">{model.name}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {currentModel && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {currentModel.description} • {currentModel.costEstimate}
-            </p>
-          )}
-        </div>
+          <TabsContent value="text-to-image" className="space-y-6 mt-6">
+            {/* Model Selector */}
+            <div className="space-y-2">
+              <label htmlFor="model" className="text-sm font-medium text-muted-foreground">
+                Model
+              </label>
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableModels.map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      <span className="font-medium">{model.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {currentModel && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {currentModel.description} • {currentModel.costEstimate}
+                </p>
+              )}
+            </div>
 
-        {/* Aspect Ratio Selector */}
-        <div className="space-y-2">
-          <label htmlFor="aspect-ratio" className="text-sm font-medium text-muted-foreground">
-            Aspect Ratio
-          </label>
-          <Select value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select aspect ratio" />
-            </SelectTrigger>
-            <SelectContent>
-              {ASPECT_RATIOS.map((ratio) => (
-                <SelectItem key={ratio.id} value={ratio.value}>
-                  <span>{ratio.name} ({ratio.description})</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            {/* Aspect Ratio Selector */}
+            <div className="space-y-2">
+              <label htmlFor="aspect-ratio" className="text-sm font-medium text-muted-foreground">
+                Aspect Ratio
+              </label>
+              <Select value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select aspect ratio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASPECT_RATIOS.map((ratio) => (
+                    <SelectItem key={ratio.id} value={ratio.value}>
+                      <span>{ratio.name} ({ratio.description})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </TabsContent>
 
-        {/* Image Upload (Image-to-Image only) */}
-        {generationType === 'image-to-image' && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">
-              Source Image
-            </label>
-            <ImageUpload
-              onImageSelect={setSourceImage}
-              currentImage={sourceImage}
-              disabled={isGenerating}
-            />
-          </div>
-        )}
+          <TabsContent value="image-to-image" className="space-y-6 mt-6">
+            {/* Model Selector */}
+            <div className="space-y-2">
+              <label htmlFor="model" className="text-sm font-medium text-muted-foreground">
+                Model
+              </label>
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableModels.map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      <span className="font-medium">{model.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {currentModel && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {currentModel.description} • {currentModel.costEstimate}
+                </p>
+              )}
+            </div>
 
-        {/* Strength Slider (Image-to-Image with WAN models only) */}
-        {supportsStrength && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">
-              Transformation Strength: {strength[0].toFixed(1)}
-            </label>
-            <div className="px-2">
-              <Slider
-                value={strength}
-                onValueChange={setStrength}
-                max={1}
-                min={0.1}
-                step={0.1}
-                className="w-full"
+            {/* Aspect Ratio Selector */}
+            <div className="space-y-2">
+              <label htmlFor="aspect-ratio" className="text-sm font-medium text-muted-foreground">
+                Aspect Ratio
+              </label>
+              <Select value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select aspect ratio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASPECT_RATIOS.map((ratio) => (
+                    <SelectItem key={ratio.id} value={ratio.value}>
+                      <span>{ratio.name} ({ratio.description})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Image Upload */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">
+                Source Image
+              </label>
+              <ImageUpload
+                onImageSelect={setSourceImage}
+                currentImage={sourceImage}
+                disabled={isGenerating}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Lower values preserve the original image, higher values allow more transformation
-            </p>
-          </div>
-        )}
+
+            {/* Strength Slider (WAN models only) */}
+            {supportsStrength && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Transformation Strength: {strength[0].toFixed(1)}
+                </label>
+                <div className="px-2">
+                  <Slider
+                    value={strength}
+                    onValueChange={setStrength}
+                    max={1}
+                    min={0.1}
+                    step={0.1}
+                    className="w-full"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Lower values preserve the original image, higher values allow more transformation
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+
 
         {/* Prompt Input */}
         <div className="space-y-2">
@@ -353,7 +375,6 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
             • PNG format
           </p>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }

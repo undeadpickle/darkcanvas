@@ -134,7 +134,7 @@ git worktree add ../darkcanvas-generation feature/generation
 
 ### Phase 2 Scope (COMPLETED ✅)
 
-- [x] Multiple model support (SDXL-Lightning, SeedDream v4, WAN v2.2 LoRA)
+- [x] Multiple model support (SDXL-Lightning, SeedDream v4)
 - [x] Model selector dropdown with descriptions and costs
 - [x] Aspect ratio presets (Square, Landscape, Portrait variations)
 - [x] PNG format output with safety checker disabled
@@ -143,11 +143,18 @@ git worktree add ../darkcanvas-generation feature/generation
 ### Phase 2.5: Image-to-Image (COMPLETED ✅)
 
 - [x] Mode toggle between text-to-image and image-to-image generation
-- [x] 3 specialized I2I models (SeedDream v4 Edit, WAN v2.2 I2I, Nano-Banana Edit)
+- [x] 2 specialized I2I models (SeedDream v4 Edit, Nano-Banana Edit)
 - [x] Image upload component with file validation (PNG, JPG, WebP up to 15MB with auto-compression)
-- [x] Transformation strength slider for WAN models (0.1-1.0)
 - [x] Unified API handling for different model input formats (image_url vs image_urls)
 - [x] Aspect ratio support for both generation modes
+
+### Phase 3.0: Consolidated UI (COMPLETED ✅)
+
+- [x] Top-level tabs (Image/Video) for future video features
+- [x] Consolidated text-to-image and image-to-image under single "Image" tab
+- [x] Fixed image upload functionality (replaced shadcn Input with native HTML input)
+- [x] Removed problematic WAN models for better reliability
+- [x] Added Video placeholder tab for future development
 
 ### What NOT to Build (YAGNI)
 
@@ -328,7 +335,7 @@ npm run build && npm run preview
 
 _Project: DarkCanvas_
 _Goal: Ship MVP in 1 week_
-_Current Phase: 2.5 (COMPLETED ✅) - Image-to-Image Implementation Complete_
-_Updated: September 17, 2025_
-_Status: 6 total models (3 text-to-image + 3 image-to-image) with full feature parity_
+_Current Phase: 3.0 (COMPLETED ✅) - Consolidated UI with Video Placeholder_
+_Updated: September 18, 2025_
+_Status: 4 total models (2 text-to-image + 2 image-to-image) - removed problematic WAN models_
 _GitHub: https://github.com/undeadpickle/darkcanvas_

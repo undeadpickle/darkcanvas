@@ -60,7 +60,7 @@ src/
 │       └── ImageDisplay.tsx      # Generated image display
 ├── lib/
 │   ├── fal.ts          # Fal.ai client (text-to-image & image-to-image)
-│   ├── models.ts       # Model configurations (6 total models)
+│   ├── models.ts       # Model configurations (4 total models)
 │   ├── image-utils.ts  # Image upload and validation utilities
 │   ├── logger.ts       # Simple logging
 │   └── utils.ts        # Utilities
@@ -77,23 +77,24 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 ## 📋 Features
 
 ### Text-to-Image Generation
-- ✅ Multiple AI model support (SDXL-Lightning, SeedDream v4, WAN v2.2 LoRA)
+- ✅ Multiple AI model support (SDXL-Lightning, SeedDream v4)
 - ✅ Aspect ratio presets (Square, Landscape, Portrait variations)
 - ✅ PNG format output with safety checker disabled
 
 ### Image-to-Image Generation
-- ✅ 3 specialized models (SeedDream v4 Edit, WAN v2.2 I2I, Nano-Banana Edit)
+- ✅ 2 specialized models (SeedDream v4 Edit, Nano-Banana Edit)
 - ✅ File upload with preview and validation (PNG, JPG, WebP up to 15MB with automatic compression)
-- ✅ Transformation strength control for WAN models
 - ✅ Same aspect ratio support as text-to-image
 
 ### Core Features
-- ✅ Mode toggle between text-to-image and image-to-image
+- ✅ Consolidated interface with Image/Video tabs
+- ✅ Mode toggle between text-to-image and image-to-image within Image tab
 - ✅ API key management (secure environment variables)
 - ✅ Image download functionality
 - ✅ Error handling and loading states
 - ✅ Responsive design with shadcn/ui
 - ✅ Clean default theme with excellent contrast
+- ✅ Video placeholder tab for future features
 
 ## 🔑 Environment
 

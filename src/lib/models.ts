@@ -29,14 +29,6 @@ export const TEXT_TO_IMAGE_MODELS: ModelConfig[] = [
     costEstimate: "Low cost ~$0.03/image",
     generationType: "text-to-image",
     inputFormat: "image_url" // Not used for T2I
-  },
-  {
-    id: "fal-ai/wan/v2.2-a14b/text-to-image/lora",
-    name: "WAN v2.2 LoRA",
-    description: "Style variations and artistic effects",
-    costEstimate: "Medium cost ~$0.05/image",
-    generationType: "text-to-image",
-    inputFormat: "image_url" // Not used for T2I
   }
 ];
 
@@ -49,14 +41,6 @@ export const IMAGE_TO_IMAGE_MODELS: ModelConfig[] = [
     costEstimate: "Low cost ~$0.03/image",
     generationType: "image-to-image",
     inputFormat: "image_urls"
-  },
-  {
-    id: "fal-ai/wan/v2.2-a14b/image-to-image",
-    name: "WAN v2.2 Image-to-Image",
-    description: "Style transfer and image transformation",
-    costEstimate: "Medium cost ~$0.05/image",
-    generationType: "image-to-image",
-    inputFormat: "image_url"
   },
   {
     id: "fal-ai/nano-banana/edit",

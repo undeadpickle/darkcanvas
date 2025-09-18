@@ -68,16 +68,31 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
   });
 
   try {
+    // Prepare input with base parameters
+    const input: Record<string, unknown> = {
+      prompt: request.prompt,
+      image_size: request.imageSize || "square_hd",
+      num_images: request.numImages || 1,
+      enable_safety_checker: false, // Always disabled for uncensored generation
+      format: request.imageFormat || "png", // Always PNG format
+      sync_mode: true,
+    };
+
+    // Add model-specific parameters
+    if (modelId.includes('wan/v2.2')) {
+      // WAN v2.2 specific parameters for optimal quality
+      input.num_inference_steps = 27; // WAN needs 27 steps for proper quality
+      input.guidance_scale = 3.5;
+      input.guidance_scale_2 = 4;
+      input.shift = 2;
+      input.acceleration = "regular";
+    } else {
+      // For other models (SDXL-Lightning, SeedDream), use fast settings
+      input.num_inference_steps = request.numInferenceSteps || 4;
+    }
+
     const result = await fal.subscribe(modelId, {
-      input: {
-        prompt: request.prompt,
-        image_size: request.imageSize || "square_hd",
-        num_images: request.numImages || 1,
-        enable_safety_checker: false, // Always disabled for uncensored generation
-        num_inference_steps: request.numInferenceSteps || 4,
-        format: request.imageFormat || "png", // Always PNG format
-        sync_mode: true,
-      },
+      input,
       logs: true,
       onQueueUpdate: (update) => {
         log.info('Queue update', update);

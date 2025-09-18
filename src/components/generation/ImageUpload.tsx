@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, Loader2, FileImage } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { processImageFile, formatFileSize } from '@/lib/image-utils';
 import { log } from '@/lib/logger';
@@ -133,12 +132,12 @@ export function ImageUpload({ onImageSelect, currentImage, disabled = false }: I
             )}
 
             {/* Hidden file input */}
-            <Input
+            <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
               onChange={handleInputChange}
-              className="hidden"
+              style={{ display: 'none' }}
               disabled={disabled}
             />
           </div>
@@ -214,12 +213,12 @@ export function ImageUpload({ onImageSelect, currentImage, disabled = false }: I
           )}
 
           {/* Hidden file input */}
-          <Input
+          <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
             onChange={handleInputChange}
-            className="hidden"
+            style={{ display: 'none' }}
             disabled={disabled}
           />
         </div>
