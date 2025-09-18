@@ -132,3 +132,29 @@ export const ASPECT_RATIOS: AspectRatioConfig[] = [
 
 // Default aspect ratio
 export const DEFAULT_ASPECT_RATIO = ASPECT_RATIOS[0];
+
+/**
+ * Detect the best matching aspect ratio for given image dimensions
+ */
+export function detectAspectRatio(width: number, height: number): AspectRatioConfig {
+  const ratio = width / height;
+
+  // Define aspect ratio ranges for matching
+  const ratioMatches = [
+    { config: ASPECT_RATIOS.find(r => r.id === 'square_hd')!, min: 0.9, max: 1.1 }, // 1:1
+    { config: ASPECT_RATIOS.find(r => r.id === 'landscape_4_3')!, min: 1.2, max: 1.4 }, // 4:3
+    { config: ASPECT_RATIOS.find(r => r.id === 'landscape_16_9')!, min: 1.6, max: 1.9 }, // 16:9
+    { config: ASPECT_RATIOS.find(r => r.id === 'portrait_4_3')!, min: 0.7, max: 0.8 }, // 3:4
+    { config: ASPECT_RATIOS.find(r => r.id === 'portrait_16_9')!, min: 0.5, max: 0.65 }, // 9:16
+  ];
+
+  // Find matching ratio
+  for (const match of ratioMatches) {
+    if (ratio >= match.min && ratio <= match.max) {
+      return match.config;
+    }
+  }
+
+  // Default to square if no match
+  return DEFAULT_ASPECT_RATIO;
+}

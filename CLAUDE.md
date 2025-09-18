@@ -62,6 +62,8 @@ claude -p "Write tests for image generation with mock Fal.ai responses"
 claude -p "Now implement the code to pass these tests"
 ```
 
+**[BrowserTools MCP]** Use BrowserTools MCP to capture console logs, network traffic, screenshots, and browser runtime errors in real-time so Claude Code has visibility into front-end issues that might not show up via console.log alone.
+
 ### Effective Prompting for Claude Code
 
 1. **Be explicit about constraints**: "Using only shadcn/ui components..."
@@ -110,6 +112,7 @@ git worktree add ../darkcanvas-generation feature/generation
 - Follow plan, but pivot fast if blocked
 - Test only critical paths (API key, generation)
 - Use console.log for debugging (we have a simple logger)
+- **[BrowserTools MCP]** When console.log isn’t enough, use BrowserTools MCP (extension + local MCP server) so you can inspect console errors, network activity, and DOM state directly.
 - Commit when it works, not when it's perfect
 
 ## DarkCanvas Specific Guidelines
@@ -312,7 +315,7 @@ npm run build && npm run preview
 
 _Project: DarkCanvas_
 _Goal: Ship MVP in 1 week_
-_Current Phase: 3.0 (COMPLETED ✅) - Consolidated UI with Video Placeholder_
+_Current Phase: 3.1 (COMPLETED ✅) - Added Automatic Aspect Ratio Detection_
 _Updated: September 18, 2025_
-_Status: 5 total models (3 text-to-image + 2 image-to-image) including OpenAI BYOK models - removed problematic WAN models_
+_Status: 5 total models (3 text-to-image + 2 image-to-image) including OpenAI BYOK models - automatic aspect ratio detection for I2I mode_
 _GitHub: https://github.com/undeadpickle/darkcanvas_

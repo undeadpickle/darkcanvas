@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Skull, Loader2, Image as ImageIcon, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { generateImage, generateImageFromImage, isConfigured } from '@/lib/fal';
-import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/lib/models';
+import { generateImage, generateImageFromImage, isConfigured, getOpenAIKeyFromEnv } from '@/lib/fal';
+import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO, detectAspectRatio } from '@/lib/models';
 import { ImageUpload } from './ImageUpload';
 import { OpenAIKeyInput } from './OpenAIKeyInput';
 import { log } from '@/lib/logger';
@@ -27,6 +27,15 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Initialize OpenAI API key from environment on mount
+  useEffect(() => {
+    const envKey = getOpenAIKeyFromEnv();
+    if (envKey) {
+      setOpenaiApiKey(envKey);
+      log.info('OpenAI API key loaded from environment');
+    }
+  }, []);
+
   // Get available models for the current generation type
   const availableModels = getModelsByType(generationType);
 
@@ -44,6 +53,33 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
       setSourceImage(null); // Clear source image for T2I
     } else {
       setSelectedModel(DEFAULT_IMAGE_TO_IMAGE_MODEL.id);
+    }
+  };
+
+  // Handle image selection with automatic aspect ratio detection
+  const handleImageSelect = (sourceImage: SourceImage | null) => {
+    setSourceImage(sourceImage);
+
+    // Only auto-update aspect ratio in image-to-image mode
+    if (generationType === 'image-to-image') {
+      if (sourceImage?.width && sourceImage?.height) {
+        // Auto-detect aspect ratio when image is uploaded
+        const detectedRatio = detectAspectRatio(sourceImage.width, sourceImage.height);
+        setSelectedAspectRatio(detectedRatio.value);
+
+        log.info('Auto-detected aspect ratio for uploaded image', {
+          dimensions: `${sourceImage.width}x${sourceImage.height}`,
+          ratio: sourceImage.width / sourceImage.height,
+          selectedRatio: detectedRatio.name
+        });
+      } else {
+        // Reset to default square ratio when image is removed
+        setSelectedAspectRatio(DEFAULT_ASPECT_RATIO.value);
+
+        log.info('Reset aspect ratio to default after image removal', {
+          selectedRatio: DEFAULT_ASPECT_RATIO.name
+        });
+      }
     }
   };
 
@@ -300,7 +336,7 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
                 Source Image
               </label>
               <ImageUpload
-                onImageSelect={setSourceImage}
+                onImageSelect={handleImageSelect}
                 currentImage={sourceImage}
                 disabled={isGenerating}
               />
@@ -361,13 +397,33 @@ export function GenerationForm({ onGeneration }: GenerationFormProps) {
             value={openaiApiKey}
             onChange={setOpenaiApiKey}
             required={true}
+            isFromEnvironment={!!getOpenAIKeyFromEnv()}
           />
         )}
 
         {/* Error Display */}
         {error && (
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-sm text-destructive font-medium">{error}</p>
+            {error.includes('organization must be verified') && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-destructive/80">
+                  To use OpenAI models, your organization needs to be verified:
+                </p>
+                <ol className="text-xs text-destructive/80 list-decimal list-inside space-y-1">
+                  <li>Go to <a
+                    href="https://platform.openai.com/settings/organization/general"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-destructive"
+                  >
+                    OpenAI Organization Settings
+                  </a></li>
+                  <li>Click "Verify Organization"</li>
+                  <li>Wait up to 15 minutes for access to propagate</li>
+                </ol>
+              </div>
+            )}
           </div>
         )}
 

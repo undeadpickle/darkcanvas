@@ -34,11 +34,12 @@ npm run preview
 ```
 
 ### Environment Setup
-1. Get your API key from [fal.ai/dashboard](https://fal.ai/dashboard)
+1. Get your Fal.ai API key from [fal.ai/dashboard](https://fal.ai/dashboard)
 2. Copy `.env.example` to `.env`
-3. Add your API key: `VITE_FAL_API_KEY=your_key_here`
-4. Start the dev server with `npm run dev`
-5. Open the local URL shown in your terminal (typically http://localhost:5173) and generate images!
+3. Add your Fal.ai API key: `VITE_FAL_API_KEY=your_key_here`
+4. **Optional**: Add your OpenAI API key for BYOK models: `VITE_OPENAI_API_KEY=your_openai_key_here`
+5. Start the dev server with `npm run dev`
+6. Open the local URL shown in your terminal (typically http://localhost:5173) and generate images!
 
 ## 🏗️ Tech Stack
 
@@ -84,6 +85,7 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 ### Image-to-Image Generation
 - ✅ 2 specialized models: SeedDream v4 Edit, GPT Image 1 Edit (OpenAI BYOK)
 - ✅ File upload with preview and validation (PNG, JPG, WebP up to 15MB with automatic compression)
+- ✅ Automatic aspect ratio detection - aspect ratio selector updates to match uploaded image dimensions
 - ✅ Same aspect ratio support as text-to-image
 
 ### Core Features
@@ -99,7 +101,18 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 
 ## 🔑 Environment
 
-API key is stored securely in environment variables. No backend required.
+API keys are stored securely in environment variables. No backend required.
+
+### Required Variables
+- `VITE_FAL_API_KEY` - Your Fal.ai API key (required)
+
+### Optional Variables
+- `VITE_OPENAI_API_KEY` - Your OpenAI API key for BYOK models (optional)
+  - If not set, you'll need to enter it manually when using OpenAI models
+  - If set, it will be pre-loaded automatically for convenience
+  - **Important**: OpenAI organization verification is required to use GPT Image models
+    - Verify at [OpenAI Organization Settings](https://platform.openai.com/settings/organization/general)
+    - Allow up to 15 minutes for verification to take effect
 
 ### Security Features
 - Environment-based API key storage (not in browser)

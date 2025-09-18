@@ -57,6 +57,22 @@ export function fileToDataUrl(file: File): Promise<string> {
 }
 
 /**
+ * Get image dimensions from file
+ */
+export function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = () => {
+      resolve({ width: img.width, height: img.height });
+    };
+
+    img.onerror = () => reject(new Error('Failed to load image for dimension detection'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+/**
  * Compress image to reduce file size for API upload
  */
 export function compressImage(file: File, maxSizeKB: number = 2000): Promise<string> {
@@ -127,6 +143,9 @@ export async function processImageFile(file: File): Promise<SourceImage> {
   }
 
   try {
+    // Get image dimensions first
+    const dimensions = await getImageDimensions(file);
+
     // For larger files, use compression to stay under API limits
     let dataUrl: string;
     if (file.size > 5 * 1024 * 1024) { // Files larger than 5MB
@@ -139,6 +158,7 @@ export async function processImageFile(file: File): Promise<SourceImage> {
     log.info('Image file processed successfully', {
       filename: file.name,
       originalSize: file.size,
+      dimensions,
       dataUrlLength: dataUrl.length,
       estimatedSizeKB: Math.round((dataUrl.length * 3) / 4 / 1024)
     });
@@ -146,7 +166,9 @@ export async function processImageFile(file: File): Promise<SourceImage> {
     return {
       url: dataUrl,
       file: file,
-      filename: file.name
+      filename: file.name,
+      width: dimensions.width,
+      height: dimensions.height
     };
   } catch (error) {
     log.error('Failed to process image file', { error, filename: file.name });

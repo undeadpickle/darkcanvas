@@ -12,6 +12,15 @@ function getApiKey(): string {
   return apiKey;
 }
 
+// Get OpenAI API key from environment variable (optional)
+function getOpenAIApiKey(): string | null {
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+  if (!apiKey || apiKey === 'your_openai_api_key_here') {
+    return null;
+  }
+  return apiKey;
+}
+
 // Configure fal client with API key from environment
 // NOTE: For production, API calls should go through a backend proxy to keep credentials secure
 // This client-side approach is acceptable for MVP/development but not recommended for production
@@ -238,12 +247,48 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
       errorStack: error instanceof Error ? error.stack : undefined
     });
 
-    // For GPT models, the error might be in result parsing, not generation
+    // Enhanced error handling for OpenAI models
     if (modelId.includes('gpt-image-1')) {
-      console.log('🔍 GPT model error - might be result parsing issue');
+      console.log('🔍 GPT model error - checking for specific error types');
+
+      // Check if error is a fal.ai API error with response details
+      const errorAny = error as any;
+      if (errorAny.body || errorAny.response) {
+        try {
+          const responseBody = errorAny.body || errorAny.response;
+          let parsedError;
+
+          if (typeof responseBody === 'string') {
+            parsedError = JSON.parse(responseBody);
+          } else {
+            parsedError = responseBody;
+          }
+
+          console.log('📊 Parsed error response:', parsedError);
+
+          // Check for organization verification error
+          if (parsedError.detail && Array.isArray(parsedError.detail)) {
+            const orgError = parsedError.detail.find((d: any) =>
+              d.msg && d.msg.includes('organization must be verified')
+            );
+
+            if (orgError) {
+              const enhancedMessage = `OpenAI Organization Verification Required: ${orgError.msg}`;
+              throw new Error(enhancedMessage);
+            }
+
+            // Handle other detailed errors
+            const firstError = parsedError.detail[0];
+            if (firstError && firstError.msg) {
+              throw new Error(`OpenAI API Error: ${firstError.msg}`);
+            }
+          }
+        } catch (parseError) {
+          console.log('📊 Could not parse error response:', parseError);
+        }
+      }
 
       // Try to extract any partial result data if available
-      const errorAny = error as any;
       if (errorAny.data || errorAny.result) {
         console.log('📊 Error contains data:', errorAny.data || errorAny.result);
       }
@@ -420,6 +465,49 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
     return typedResult;
   } catch (error) {
     log.error('Image-to-image generation failed', { model: request.modelId, error });
+
+    // Enhanced error handling for OpenAI models
+    if (request.modelId.includes('gpt-image-1')) {
+      console.log('🔍 GPT I2I model error - checking for specific error types');
+
+      // Check if error is a fal.ai API error with response details
+      const errorAny = error as any;
+      if (errorAny.body || errorAny.response) {
+        try {
+          const responseBody = errorAny.body || errorAny.response;
+          let parsedError;
+
+          if (typeof responseBody === 'string') {
+            parsedError = JSON.parse(responseBody);
+          } else {
+            parsedError = responseBody;
+          }
+
+          console.log('📊 Parsed I2I error response:', parsedError);
+
+          // Check for organization verification error
+          if (parsedError.detail && Array.isArray(parsedError.detail)) {
+            const orgError = parsedError.detail.find((d: any) =>
+              d.msg && d.msg.includes('organization must be verified')
+            );
+
+            if (orgError) {
+              const enhancedMessage = `OpenAI Organization Verification Required: ${orgError.msg}`;
+              throw new Error(enhancedMessage);
+            }
+
+            // Handle other detailed errors
+            const firstError = parsedError.detail[0];
+            if (firstError && firstError.msg) {
+              throw new Error(`OpenAI API Error: ${firstError.msg}`);
+            }
+          }
+        } catch (parseError) {
+          console.log('📊 Could not parse I2I error response:', parseError);
+        }
+      }
+    }
+
     throw error;
   }
 }
@@ -432,4 +520,9 @@ export function isConfigured(): boolean {
   } catch {
     return false;
   }
+}
+
+// Get OpenAI API key from environment (returns null if not set)
+export function getOpenAIKeyFromEnv(): string | null {
+  return getOpenAIApiKey();
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Key, ExternalLink, X } from 'lucide-react';
+import { Eye, EyeOff, Key, ExternalLink, X, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -7,9 +7,10 @@ interface OpenAIKeyInputProps {
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
+  isFromEnvironment?: boolean;
 }
 
-export function OpenAIKeyInput({ value, onChange, required = false }: OpenAIKeyInputProps) {
+export function OpenAIKeyInput({ value, onChange, required = false, isFromEnvironment = false }: OpenAIKeyInputProps) {
   const [showKey, setShowKey] = useState(false);
 
   const validateKey = (key: string): boolean => {
@@ -29,6 +30,12 @@ export function OpenAIKeyInput({ value, onChange, required = false }: OpenAIKeyI
           <Key className="w-4 h-4" />
           <span>OpenAI API Key</span>
           {required && <span className="text-destructive">*</span>}
+          {isFromEnvironment && value && (
+            <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+              <Shield className="w-3 h-3" />
+              <span>From Environment</span>
+            </div>
+          )}
         </label>
         <Button
           variant="link"
@@ -96,8 +103,23 @@ export function OpenAIKeyInput({ value, onChange, required = false }: OpenAIKeyI
             <p className="font-medium">BYOK (Bring Your Own Key)</p>
             <p className="text-muted-foreground">
               This model requires your own OpenAI API key. You'll be billed directly by OpenAI based on your usage.
+              {isFromEnvironment && ' (Key loaded from VITE_OPENAI_API_KEY environment variable)'}
             </p>
           </div>
+        </div>
+
+        <div className="border-t pt-2 space-y-1">
+          <p className="font-medium text-orange-600">Organization Verification Required:</p>
+          <ul className="text-muted-foreground space-y-0.5 ml-4 list-disc">
+            <li>Your OpenAI organization must be verified to use GPT Image models</li>
+            <li>Visit <a
+              href="https://platform.openai.com/settings/organization/general"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >Organization Settings</a> to verify</li>
+            <li>Allow up to 15 minutes for verification to take effect</li>
+          </ul>
         </div>
 
         <div className="border-t pt-2 space-y-1">

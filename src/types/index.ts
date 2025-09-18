@@ -12,6 +12,8 @@ export interface SourceImage {
   url: string;
   file?: File;
   filename?: string;
+  width?: number;
+  height?: number;
 }
 
 export interface ImageGeneration {
