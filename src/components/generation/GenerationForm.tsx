@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react';
 import { Skull, Loader2, Image as ImageIcon, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateImage, generateImageFromImage, isConfigured, getOpenAIKeyFromEnv } from '@/lib/fal';
 import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO, detectAspectRatio } from '@/lib/models';
 import { ImageUpload } from './ImageUpload';
 import { OpenAIKeyInput } from './OpenAIKeyInput';
+import { ModelSelector } from './ModelSelector';
+import { AspectRatioSelector } from './AspectRatioSelector';
+import { GenerationStatus } from './GenerationStatus';
 import { log } from '@/lib/logger';
+import { getUserFriendlyError } from '@/lib/error-utils';
 import type { ImageGeneration, GenerationType, SourceImage, GeneratedImage } from '@/types';
 
 interface GenerationFormProps {
@@ -222,22 +225,27 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
       });
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Generation failed';
-      setError(errorMessage);
+      const originalError = err instanceof Error ? err.message : 'Generation failed';
+      const userFriendlyMessage = err instanceof Error ? getUserFriendlyError(err) : 'Generation failed';
+
+      // Log the original technical error for debugging
+      log.error('Generation failed (technical details)', {
+        id: generationId,
+        type: generationType,
+        originalError,
+        userMessage: userFriendlyMessage
+      });
+
+      // Show user-friendly message
+      setError(userFriendlyMessage);
 
       const failedGeneration: ImageGeneration = {
         ...generation,
         status: 'error',
-        error: errorMessage,
+        error: originalError, // Store technical error for internal use
       };
 
       onGeneration(failedGeneration);
-
-      log.error('Generation failed', {
-        id: generationId,
-        type: generationType,
-        error: errorMessage
-      });
     } finally {
       setIsGenerating(false);
     }
@@ -276,93 +284,35 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
           </TabsList>
 
           <TabsContent value="text-to-image" className="space-y-6 mt-6">
-            {/* Model Selector */}
-            <div className="space-y-2">
-              <label htmlFor="model" className="text-sm font-medium text-muted-foreground">
-                Model
-              </label>
-              <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableModels.map((model) => (
-                    <SelectItem key={model.id} value={model.id}>
-                      <span className="font-medium">{model.name}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {currentModel && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {currentModel.description} • {currentModel.costEstimate}
-                </p>
-              )}
-            </div>
-
-            {/* Aspect Ratio Selector */}
-            <div className="space-y-2">
-              <label htmlFor="aspect-ratio" className="text-sm font-medium text-muted-foreground">
-                Aspect Ratio
-              </label>
-              <Select value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select aspect ratio" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ASPECT_RATIOS.map((ratio) => (
-                    <SelectItem key={ratio.id} value={ratio.value}>
-                      <span>{ratio.name} ({ratio.description})</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <ModelSelector
+              selectedModel={selectedModel}
+              onModelChange={setSelectedModel}
+              availableModels={availableModels}
+              currentModel={currentModel}
+              disabled={isGenerating}
+            />
+            <AspectRatioSelector
+              selectedAspectRatio={selectedAspectRatio}
+              onAspectRatioChange={setSelectedAspectRatio}
+              aspectRatios={ASPECT_RATIOS}
+              disabled={isGenerating}
+            />
           </TabsContent>
 
           <TabsContent value="image-to-image" className="space-y-6 mt-6">
-            {/* Model Selector */}
-            <div className="space-y-2">
-              <label htmlFor="model" className="text-sm font-medium text-muted-foreground">
-                Model
-              </label>
-              <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableModels.map((model) => (
-                    <SelectItem key={model.id} value={model.id}>
-                      <span className="font-medium">{model.name}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {currentModel && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {currentModel.description} • {currentModel.costEstimate}
-                </p>
-              )}
-            </div>
-
-            {/* Aspect Ratio Selector */}
-            <div className="space-y-2">
-              <label htmlFor="aspect-ratio" className="text-sm font-medium text-muted-foreground">
-                Aspect Ratio
-              </label>
-              <Select value={selectedAspectRatio} onValueChange={setSelectedAspectRatio}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select aspect ratio" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ASPECT_RATIOS.map((ratio) => (
-                    <SelectItem key={ratio.id} value={ratio.value}>
-                      <span>{ratio.name} ({ratio.description})</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <ModelSelector
+              selectedModel={selectedModel}
+              onModelChange={setSelectedModel}
+              availableModels={availableModels}
+              currentModel={currentModel}
+              disabled={isGenerating}
+            />
+            <AspectRatioSelector
+              selectedAspectRatio={selectedAspectRatio}
+              onAspectRatioChange={setSelectedAspectRatio}
+              aspectRatios={ASPECT_RATIOS}
+              disabled={isGenerating}
+            />
 
             {/* Image Upload */}
             <div className="space-y-2">
@@ -483,14 +433,14 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
         </Button>
 
         {/* Status */}
-        {isConfiguredState && (
-          <p className="text-xs text-center text-muted-foreground">
-            Mode: {generationType} • Model: {availableModels.find(m => m.id === selectedModel)?.name}
-            • {ASPECT_RATIOS.find(r => r.value === selectedAspectRatio)?.description}
-            {supportsStrength && ` • Strength: ${strength[0].toFixed(1)}`}
-            • PNG format
-          </p>
-        )}
+        <GenerationStatus
+          isConfigured={isConfiguredState}
+          generationType={generationType}
+          selectedModel={currentModel}
+          selectedAspectRatio={ASPECT_RATIOS.find(r => r.value === selectedAspectRatio)}
+          strength={strength[0]}
+          supportsStrength={supportsStrength}
+        />
     </div>
   );
 }

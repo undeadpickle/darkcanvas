@@ -150,9 +150,22 @@ export async function processImageFile(file: File): Promise<SourceImage> {
     let dataUrl: string;
     if (file.size > 5 * 1024 * 1024) { // Files larger than 5MB
       log.info('File is large, applying compression', { originalSize: file.size });
-      dataUrl = await compressImage(file, 5000); // Target 5MB compressed
+      dataUrl = await compressImage(file, 3000); // Target 3MB compressed (more aggressive)
+    } else if (file.size > 3 * 1024 * 1024) { // Files larger than 3MB
+      log.info('File is moderately large, applying light compression', { originalSize: file.size });
+      dataUrl = await compressImage(file, 2000); // Target 2MB compressed
     } else {
       dataUrl = await fileToDataUrl(file);
+    }
+
+    const estimatedSizeKB = Math.round((dataUrl.length * 3) / 4 / 1024);
+
+    // Warn if final size might be too large for some models
+    if (estimatedSizeKB > 4000) { // > 4MB
+      log.warn('Processed image is large and may be rejected by some models', {
+        estimatedSizeKB,
+        originalSize: file.size
+      });
     }
 
     log.info('Image file processed successfully', {
@@ -160,7 +173,7 @@ export async function processImageFile(file: File): Promise<SourceImage> {
       originalSize: file.size,
       dimensions,
       dataUrlLength: dataUrl.length,
-      estimatedSizeKB: Math.round((dataUrl.length * 3) / 4 / 1024)
+      estimatedSizeKB
     });
 
     return {

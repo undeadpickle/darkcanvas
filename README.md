@@ -56,13 +56,24 @@ src/
 ├── components/
 │   ├── ui/              # shadcn/ui components (Button, Card, Select, Slider)
 │   └── generation/      # Image generation components
-│       ├── GenerationForm.tsx    # Main form with mode toggle
-│       ├── ImageUpload.tsx       # File upload for image-to-image
-│       └── ImageDisplay.tsx      # Generated image display
+│       ├── GenerationForm.tsx       # Main form with mode toggle
+│       ├── ModelSelector.tsx        # Model selection component
+│       ├── AspectRatioSelector.tsx  # Aspect ratio selection component
+│       ├── GenerationStatus.tsx     # Generation status display
+│       ├── ImageUpload.tsx          # File upload orchestrator
+│       ├── ImagePreview.tsx         # Image preview component
+│       ├── UploadZone.tsx          # Upload area component
+│       ├── ImageDisplay.tsx         # Generated image display
+│       ├── OpenAIKeyInput.tsx      # OpenAI API key input
+│       └── VideoDisplay.tsx        # Video placeholder component
+├── hooks/
+│   └── useGenerationState.ts       # Custom hook for generation state
 ├── lib/
 │   ├── fal.ts          # Fal.ai client (text-to-image & image-to-image)
 │   ├── models.ts       # Model configurations (5 total models)
 │   ├── image-utils.ts  # Image upload and validation utilities
+│   ├── error-utils.ts  # User-friendly error message utilities
+│   ├── api-types.ts    # API response type definitions
 │   ├── logger.ts       # Simple logging
 │   └── utils.ts        # Utilities
 ├── types/              # TypeScript definitions
@@ -98,7 +109,7 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 - ✅ Responsive design with shadcn/ui
 - ✅ Clean default theme with excellent contrast
 - ✅ Video placeholder tab for future features
-- ✅ Production-ready build with optimized bundle (396KB JS, 30KB CSS)
+- ✅ Production-ready build with optimized bundle (404KB JS, 30KB CSS)
 
 ## 🔑 Environment
 

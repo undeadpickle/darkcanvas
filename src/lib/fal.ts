@@ -2,6 +2,7 @@ import * as fal from "@fal-ai/serverless-client";
 import { log } from "./logger";
 import { DEFAULT_TEXT_TO_IMAGE_MODEL, getModelById } from "./models";
 import type { SourceImage, OpenAIUsage } from "@/types";
+import type { FalApiError, FalImageResponse, FalApiErrorDetail } from "./api-types";
 
 // Get API key from environment variable
 function getApiKey(): string {
@@ -171,10 +172,10 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
         // GPT models should return { images: [{ url: "..." }], usage: {...} }
         if (resultAny.images && Array.isArray(resultAny.images)) {
           console.log('✅ Found GPT images array:', resultAny.images);
-          images = resultAny.images.map((img: any) => ({
-            url: img.url || img,
-            width: img.width || 1024,
-            height: img.height || 1024
+          images = resultAny.images.map((img: FalImageResponse | string) => ({
+            url: typeof img === 'string' ? img : img.url,
+            width: typeof img === 'string' ? 1024 : (img.width || 1024),
+            height: typeof img === 'string' ? 1024 : (img.height || 1024)
           }));
         } else {
           console.log('❌ GPT images not found in expected format');
@@ -252,10 +253,10 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
       console.log('🔍 GPT model error - checking for specific error types');
 
       // Check if error is a fal.ai API error with response details
-      const errorAny = error as any;
-      if (errorAny.body || errorAny.response) {
+      const typedError = error as FalApiError;
+      if (typedError.body || (typedError as any).response) {
         try {
-          const responseBody = errorAny.body || errorAny.response;
+          const responseBody = typedError.body || (typedError as any).response;
           let parsedError;
 
           if (typeof responseBody === 'string') {
@@ -268,7 +269,7 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
 
           // Check for organization verification error
           if (parsedError.detail && Array.isArray(parsedError.detail)) {
-            const orgError = parsedError.detail.find((d: any) =>
+            const orgError = parsedError.detail.find((d: FalApiErrorDetail) =>
               d.msg && d.msg.includes('organization must be verified')
             );
 
@@ -289,8 +290,8 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
       }
 
       // Try to extract any partial result data if available
-      if (errorAny.data || errorAny.result) {
-        console.log('📊 Error contains data:', errorAny.data || errorAny.result);
+      if ((typedError as any).data || (typedError as any).result) {
+        console.log('📊 Error contains data:', (typedError as any).data || (typedError as any).result);
       }
     }
 
@@ -471,10 +472,10 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
       console.log('🔍 GPT I2I model error - checking for specific error types');
 
       // Check if error is a fal.ai API error with response details
-      const errorAny = error as any;
-      if (errorAny.body || errorAny.response) {
+      const typedError = error as FalApiError;
+      if (typedError.body || (typedError as any).response) {
         try {
-          const responseBody = errorAny.body || errorAny.response;
+          const responseBody = typedError.body || (typedError as any).response;
           let parsedError;
 
           if (typeof responseBody === 'string') {
@@ -487,7 +488,7 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
 
           // Check for organization verification error
           if (parsedError.detail && Array.isArray(parsedError.detail)) {
-            const orgError = parsedError.detail.find((d: any) =>
+            const orgError = parsedError.detail.find((d: FalApiErrorDetail) =>
               d.msg && d.msg.includes('organization must be verified')
             );
 
