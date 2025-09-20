@@ -5,11 +5,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateImage, generateImageFromImage, isConfigured, getOpenAIKeyFromEnv } from '@/lib/fal';
-import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO, detectAspectRatio, getDimensionsFromAspectRatio } from '@/lib/models';
+import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO, detectAspectRatio, getDimensionsFromAspectRatio, getDimensionsForQuality } from '@/lib/models';
 import { ImageUpload } from './ImageUpload';
 import { OpenAIKeyInput } from './OpenAIKeyInput';
 import { ModelSelector } from './ModelSelector';
 import { AspectRatioSelector } from './AspectRatioSelector';
+import { ResolutionToggle } from './ResolutionToggle';
 import { GenerationStatus } from './GenerationStatus';
 import { log } from '@/lib/logger';
 import { getUserFriendlyError } from '@/lib/error-utils';
@@ -26,6 +27,7 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
   const [prompt, setPrompt] = useState('');
   const [selectedModel, setSelectedModel] = useState(DEFAULT_TEXT_TO_IMAGE_MODEL.id);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState(DEFAULT_ASPECT_RATIO.value);
+  const [useHighResolution, setUseHighResolution] = useState(true);
   const [sourceImage, setSourceImage] = useState<SourceImage | null>(null);
   const [strength, setStrength] = useState([0.8]); // Slider expects array
   const [openaiApiKey, setOpenaiApiKey] = useState('');
@@ -97,6 +99,9 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
 
   // Get the currently selected model info
   const currentModel = getModelById(selectedModel);
+
+  // Get the currently selected aspect ratio config
+  const currentAspectRatio = ASPECT_RATIOS.find(r => r.value === selectedAspectRatio) || DEFAULT_ASPECT_RATIO;
 
   // Handle generation type change
   const handleGenerationTypeChange = (type: GenerationType) => {
@@ -182,6 +187,7 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
       strength: generationType === 'image-to-image' ? strength[0] : undefined,
       images: [],
       status: 'generating',
+      resolutionQuality: useHighResolution ? 'high' : 'low',
       createdAt: new Date(),
     };
 
@@ -194,6 +200,10 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
         model: selectedModel
       });
 
+      // Get the dimensions for the selected quality
+      const quality = useHighResolution ? 'high' : 'low';
+      const dimensions = getDimensionsForQuality(currentAspectRatio, quality);
+
       let result;
 
       if (generationType === 'text-to-image') {
@@ -201,12 +211,14 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
           prompt: prompt.trim(),
           modelId: selectedModel,
           imageSize: selectedAspectRatio,
+          customDimensions: dimensions,
           numImages: 1,
           enableSafetyChecker: false,
           numInferenceSteps: 4,
           imageFormat: 'png',
           openaiApiKey: currentModel?.requiresOpenAIKey ? openaiApiKey : undefined,
           aspectRatio: selectedAspectRatio,
+          resolutionQuality: quality,
         });
       } else {
         // Image-to-image generation
@@ -220,12 +232,14 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
           modelId: selectedModel,
           strength: strength[0],
           imageSize: selectedAspectRatio,
+          customDimensions: dimensions,
           numImages: 1,
           enableSafetyChecker: false,
           numInferenceSteps: 4,
           imageFormat: 'png',
           openaiApiKey: currentModel?.requiresOpenAIKey ? openaiApiKey : undefined,
           aspectRatio: selectedAspectRatio,
+          resolutionQuality: quality,
         });
       }
 
@@ -313,10 +327,17 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
               currentModel={currentModel}
               disabled={isGenerating}
             />
+            <ResolutionToggle
+              useHighResolution={useHighResolution}
+              onToggle={setUseHighResolution}
+              selectedAspectRatio={currentAspectRatio}
+              disabled={isGenerating}
+            />
             <AspectRatioSelector
               selectedAspectRatio={selectedAspectRatio}
               onAspectRatioChange={setSelectedAspectRatio}
               aspectRatios={ASPECT_RATIOS}
+              useHighResolution={useHighResolution}
               disabled={isGenerating}
             />
           </TabsContent>
@@ -329,10 +350,17 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
               currentModel={currentModel}
               disabled={isGenerating}
             />
+            <ResolutionToggle
+              useHighResolution={useHighResolution}
+              onToggle={setUseHighResolution}
+              selectedAspectRatio={currentAspectRatio}
+              disabled={isGenerating}
+            />
             <AspectRatioSelector
               selectedAspectRatio={selectedAspectRatio}
               onAspectRatioChange={setSelectedAspectRatio}
               aspectRatios={ASPECT_RATIOS}
+              useHighResolution={useHighResolution}
               disabled={isGenerating}
             />
 

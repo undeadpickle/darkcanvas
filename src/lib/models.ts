@@ -95,6 +95,10 @@ export interface AspectRatioConfig {
   name: string;
   value: string;
   description: string;
+  dimensions: {
+    high: { width: number; height: number };
+    low: { width: number; height: number };
+  };
 }
 
 export const ASPECT_RATIOS: AspectRatioConfig[] = [
@@ -102,31 +106,51 @@ export const ASPECT_RATIOS: AspectRatioConfig[] = [
     id: "square_hd",
     name: "Square 1:1",
     value: "square_hd",
-    description: "1024×1024"
+    description: "Square format",
+    dimensions: {
+      high: { width: 1024, height: 1024 },
+      low: { width: 768, height: 768 }
+    }
   },
   {
     id: "landscape_4_3",
     name: "Landscape 4:3",
     value: "landscape_4_3",
-    description: "1365×1024"
+    description: "Standard landscape",
+    dimensions: {
+      high: { width: 1536, height: 1152 },
+      low: { width: 1024, height: 768 }
+    }
   },
   {
     id: "landscape_16_9",
     name: "Landscape 16:9",
     value: "landscape_16_9",
-    description: "1920×1080"
+    description: "Widescreen format",
+    dimensions: {
+      high: { width: 1920, height: 1080 },
+      low: { width: 1024, height: 576 }
+    }
   },
   {
     id: "portrait_4_3",
     name: "Portrait 4:3",
     value: "portrait_4_3",
-    description: "1024×1365"
+    description: "Standard portrait",
+    dimensions: {
+      high: { width: 1152, height: 1536 },
+      low: { width: 768, height: 1024 }
+    }
   },
   {
     id: "portrait_16_9",
     name: "Portrait 9:16",
     value: "portrait_16_9",
-    description: "1080×1920"
+    description: "Mobile portrait",
+    dimensions: {
+      high: { width: 1080, height: 1920 },
+      low: { width: 576, height: 1024 }
+    }
   }
 ];
 
@@ -134,26 +158,23 @@ export const ASPECT_RATIOS: AspectRatioConfig[] = [
 export const DEFAULT_ASPECT_RATIO = ASPECT_RATIOS[0];
 
 /**
- * Get dimensions for a given aspect ratio value
+ * Get dimensions for a given aspect ratio value and quality setting
  */
-export function getDimensionsFromAspectRatio(aspectRatioValue: string): { width: number; height: number } {
+export function getDimensionsFromAspectRatio(aspectRatioValue: string, quality: 'high' | 'low' = 'high'): { width: number; height: number } {
   const aspectRatio = ASPECT_RATIOS.find(r => r.value === aspectRatioValue);
   if (!aspectRatio) {
     // Return default square dimensions
     return { width: 1024, height: 1024 };
   }
 
-  // Parse dimensions from description (e.g., "1920×1080")
-  const match = aspectRatio.description.match(/(\d+)×(\d+)/);
-  if (match) {
-    return {
-      width: parseInt(match[1], 10),
-      height: parseInt(match[2], 10)
-    };
-  }
+  return aspectRatio.dimensions[quality];
+}
 
-  // Fallback to default
-  return { width: 1024, height: 1024 };
+/**
+ * Get dimensions for a specific aspect ratio config and quality
+ */
+export function getDimensionsForQuality(aspectRatio: AspectRatioConfig, quality: 'high' | 'low'): { width: number; height: number } {
+  return aspectRatio.dimensions[quality];
 }
 
 /**

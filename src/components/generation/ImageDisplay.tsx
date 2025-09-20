@@ -24,6 +24,7 @@ export function ImageDisplay({ generation, onUseAsSource }: ImageDisplayProps) {
 
       window.URL.revokeObjectURL(url);
     } catch (error) {
+      // Using console.error for download failures as this is user-facing functionality
       console.error('Download failed:', error);
     }
   };

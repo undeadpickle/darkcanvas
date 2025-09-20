@@ -54,10 +54,11 @@ npm run preview
 ```
 src/
 ├── components/
-│   ├── ui/              # shadcn/ui components (Button, Card, Select, Slider)
+│   ├── ui/              # shadcn/ui components (Button, Card, Select, Slider, Switch)
 │   └── generation/      # Image generation components
 │       ├── GenerationForm.tsx       # Main form with mode toggle
 │       ├── ModelSelector.tsx        # Model selection component
+│       ├── ResolutionToggle.tsx     # Resolution quality toggle (High/Fast modes)
 │       ├── AspectRatioSelector.tsx  # Aspect ratio selection component
 │       ├── GenerationStatus.tsx     # Generation status display
 │       ├── ImageUpload.tsx          # File upload orchestrator
@@ -91,13 +92,14 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 ### Text-to-Image Generation
 - ✅ 3 AI models: SDXL-Lightning, SeedDream v4, GPT Image 1 (OpenAI DALL-E BYOK)
 - ✅ Aspect ratio presets (Square, Landscape, Portrait variations)
+- ✅ **Resolution quality toggle** - Choose between High Quality (1920×1080) and Fast Mode (1024×576) for speed/cost control
 - ✅ PNG format output with safety checker disabled
 
 ### Image-to-Image Generation
 - ✅ 2 specialized models: SeedDream v4 Edit, GPT Image 1 Edit (OpenAI BYOK)
 - ✅ File upload with preview and validation (PNG, JPG, WebP up to 15MB with automatic compression)
 - ✅ Automatic aspect ratio detection - aspect ratio selector updates to match uploaded image dimensions
-- ✅ Same aspect ratio support as text-to-image
+- ✅ **Resolution quality toggle** - Same high/low quality options for image-to-image generation
 - ✅ **Use generated image as source** - "Use in Image-to-Image" button allows seamless iteration
 
 ### Core Features

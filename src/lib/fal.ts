@@ -23,9 +23,9 @@ function getOpenAIApiKey(): string | null {
 }
 
 // Get correct dimensions for aspect ratio, with fallback to 1024x1024
-function getCorrectDimensions(aspectRatio?: string): { width: number; height: number } {
+function getCorrectDimensions(aspectRatio?: string, quality: 'high' | 'low' = 'high'): { width: number; height: number } {
   if (aspectRatio) {
-    return getDimensionsFromAspectRatio(aspectRatio);
+    return getDimensionsFromAspectRatio(aspectRatio, quality);
   }
   return { width: 1024, height: 1024 };
 }
@@ -45,12 +45,14 @@ export interface GenerationRequest {
   prompt: string;
   modelId?: string;
   imageSize?: string;
+  customDimensions?: { width: number; height: number }; // Custom resolution
   numImages?: number;
   enableSafetyChecker?: boolean;
   numInferenceSteps?: number;
   imageFormat?: string;
   openaiApiKey?: string; // For BYOK models
   aspectRatio?: string; // To track the aspect ratio used during generation
+  resolutionQuality?: 'high' | 'low'; // Quality setting for resolution
 }
 
 export interface ImageToImageRequest {
@@ -59,12 +61,14 @@ export interface ImageToImageRequest {
   modelId: string;
   strength?: number;
   imageSize?: string;
+  customDimensions?: { width: number; height: number }; // Custom resolution
   numImages?: number;
   enableSafetyChecker?: boolean;
   numInferenceSteps?: number;
   imageFormat?: string;
   openaiApiKey?: string; // For BYOK models
   aspectRatio?: string; // To track the aspect ratio used during generation
+  resolutionQuality?: 'high' | 'low'; // Quality setting for resolution
 }
 
 export interface GenerationResult {
@@ -97,12 +101,18 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
     // Prepare input with base parameters
     let input: Record<string, unknown> = {
       prompt: request.prompt,
-      image_size: request.imageSize || "square_hd",
       num_images: request.numImages || 1,
       enable_safety_checker: false, // Always disabled for uncensored generation
       format: request.imageFormat || "png", // Always PNG format
       sync_mode: true,
     };
+
+    // Use custom dimensions if provided, otherwise use image_size string
+    if (request.customDimensions) {
+      input.image_size = request.customDimensions;
+    } else {
+      input.image_size = request.imageSize || "square_hd";
+    }
 
     // Add model-specific parameters
     if (modelId.includes('wan/v2.2')) {
@@ -113,18 +123,19 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
       input.shift = 2;
       input.acceleration = "regular";
     } else if (modelId.includes('gpt-image-1')) {
-      console.log('🔥 GPT IMAGE 1 DETECTED:', modelId);
+      log.info('GPT IMAGE 1 model detected', { modelId });
 
       // GPT Image 1 specific parameters
       if (!request.openaiApiKey) {
         throw new Error('OpenAI API key is required for GPT Image 1 models');
       }
 
-      console.log('🔑 OpenAI Key provided:', request.openaiApiKey ? 'YES' : 'NO');
-      console.log('🔑 OpenAI Key length:', request.openaiApiKey?.length);
-      console.log('🔑 OpenAI Key starts with sk-:', request.openaiApiKey?.startsWith('sk-'));
-      console.log('📝 Prompt:', request.prompt);
-      console.log('📝 Prompt length:', request.prompt?.length);
+      log.info('OpenAI API key validation', {
+        hasKey: !!request.openaiApiKey,
+        keyLength: request.openaiApiKey?.length,
+        validFormat: request.openaiApiKey?.startsWith('sk-'),
+        promptLength: request.prompt?.length
+      });
 
       // Validate OpenAI key format more strictly
       if (!request.openaiApiKey?.startsWith('sk-') || request.openaiApiKey.length < 40) {
@@ -137,40 +148,38 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
         openai_api_key: request.openaiApiKey.trim()
       };
 
-      console.log('📦 Final GPT input:', JSON.stringify(input, null, 2));
+      log.info('GPT model input prepared', { inputKeys: Object.keys(input) });
     } else {
       // For other models (SDXL-Lightning, SeedDream), use fast settings
       input.num_inference_steps = request.numInferenceSteps || 4;
     }
 
-    // Log the exact input being sent to fal.ai for debugging
-    console.log('🚀 SENDING TO FAL.AI:', {
+    // Log generation request details
+    log.info('Starting fal.ai API request', {
       modelId,
-      input: JSON.stringify(input, null, 2)
+      customDimensions: request.customDimensions,
+      resolutionQuality: request.resolutionQuality
     });
-
-    console.log('🎯 Attempting fal.subscribe...');
 
     const result = await fal.subscribe(modelId, {
       input,
       logs: true,
       onQueueUpdate: (update) => {
-        console.log('📊 Queue update:', update);
+        log.info('Generation queue update', update);
       },
     });
 
-    console.log('✅ fal.subscribe completed:', result);
-
-    // Log raw result to understand different model response structures
-    console.log('📋 Raw result structure:', JSON.stringify(result, null, 2));
+    log.info('Generation completed', { hasResult: !!result, model: modelId });
 
     const typedResult = result as GenerationResult;
 
     // Handle different response structures from different models
     if (!typedResult.images || !Array.isArray(typedResult.images)) {
-      console.log('🔧 Converting response structure for', modelId);
-      console.log('🔧 Original images field:', typedResult.images);
-      console.log('🔧 Images type:', typeof typedResult.images);
+      log.info('Converting response structure', {
+        model: modelId,
+        hasImages: !!typedResult.images,
+        imagesType: typeof typedResult.images
+      });
 
       // Try to find images in different possible locations
       const resultAny = result as Record<string, unknown>;
@@ -178,24 +187,23 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
 
       // Special handling for GPT models
       if (modelId.includes('gpt-image-1')) {
-        console.log('🎨 Processing GPT Image 1 response');
+        log.info('Processing GPT Image 1 response');
 
         // GPT models should return { images: [{ url: "..." }], usage: {...} }
         if (resultAny.images && Array.isArray(resultAny.images)) {
-          console.log('✅ Found GPT images array:', resultAny.images);
-          const correctDimensions = getCorrectDimensions(request.aspectRatio);
+          log.info('Found GPT images array', { imageCount: resultAny.images.length });
+          const correctDimensions = getCorrectDimensions(request.aspectRatio, request.resolutionQuality);
           images = resultAny.images.map((img: FalImageResponse | string) => ({
             url: typeof img === 'string' ? img : img.url,
             width: typeof img === 'string' ? correctDimensions.width : (img.width || correctDimensions.width),
             height: typeof img === 'string' ? correctDimensions.height : (img.height || correctDimensions.height)
           }));
         } else {
-          console.log('❌ GPT images not found in expected format');
-          console.log('🔍 Available fields:', Object.keys(resultAny));
+          log.warn('GPT images not found in expected format', { availableFields: Object.keys(resultAny) });
         }
       } else {
         // Handle other model formats
-        const correctDimensions = getCorrectDimensions(request.aspectRatio);
+        const correctDimensions = getCorrectDimensions(request.aspectRatio, request.resolutionQuality);
         if (resultAny.image) {
           // Handle single image object (WAN model format)
           if (typeof resultAny.image === 'object' && resultAny.image !== null && 'url' in resultAny.image) {
@@ -257,7 +265,7 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
 
     return typedResult;
   } catch (error) {
-    console.log('❌ Error in generateImage:', error);
+    log.error('Generation error occurred', { error: error instanceof Error ? error.message : String(error) });
 
     // Log more detailed error information
     log.error('Image generation failed', {
@@ -269,7 +277,7 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
 
     // Enhanced error handling for OpenAI models
     if (modelId.includes('gpt-image-1')) {
-      console.log('🔍 GPT model error - checking for specific error types');
+      log.info('Analyzing GPT model error for specific error types');
 
       // Check if error is a fal.ai API error with response details
       const typedError = error as FalApiError;
@@ -284,7 +292,7 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
             parsedError = responseBody;
           }
 
-          console.log('📊 Parsed error response:', parsedError);
+          log.info('Parsed API error response', { errorDetails: parsedError });
 
           // Check for organization verification error
           if (parsedError.detail && Array.isArray(parsedError.detail)) {
@@ -304,13 +312,13 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
             }
           }
         } catch (parseError) {
-          console.log('📊 Could not parse error response:', parseError);
+          log.warn('Could not parse error response', { parseError });
         }
       }
 
       // Try to extract any partial result data if available
       if ((typedError as any).data || (typedError as any).result) {
-        console.log('📊 Error contains data:', (typedError as any).data || (typedError as any).result);
+        log.info('Error contains partial data', { data: (typedError as any).data || (typedError as any).result });
       }
     }
 
@@ -394,8 +402,12 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
     }
 
     // Add optional parameters (only for non-GPT models since GPT has different size mapping)
-    if (request.imageSize && !request.modelId.includes('gpt-image-1')) {
-      input.image_size = request.imageSize;
+    if (!request.modelId.includes('gpt-image-1')) {
+      if (request.customDimensions) {
+        input.image_size = request.customDimensions;
+      } else if (request.imageSize) {
+        input.image_size = request.imageSize;
+      }
     }
     if (request.numImages) {
       input.num_images = request.numImages;
@@ -430,7 +442,7 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
       const resultAny = result as Record<string, unknown>;
       let images: Array<{ url: string; width: number; height: number }> = [];
 
-      const correctDimensions = getCorrectDimensions(request.aspectRatio);
+      const correctDimensions = getCorrectDimensions(request.aspectRatio, request.resolutionQuality);
       if (resultAny.image) {
         // Handle single image object (WAN model format)
         if (typeof resultAny.image === 'object' && resultAny.image !== null && 'url' in resultAny.image) {
@@ -495,7 +507,7 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
 
     // Enhanced error handling for OpenAI models
     if (request.modelId.includes('gpt-image-1')) {
-      console.log('🔍 GPT I2I model error - checking for specific error types');
+      log.info('Analyzing GPT I2I model error for specific error types');
 
       // Check if error is a fal.ai API error with response details
       const typedError = error as FalApiError;
@@ -510,7 +522,7 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
             parsedError = responseBody;
           }
 
-          console.log('📊 Parsed I2I error response:', parsedError);
+          log.info('Parsed I2I API error response', { errorDetails: parsedError });
 
           // Check for organization verification error
           if (parsedError.detail && Array.isArray(parsedError.detail)) {
@@ -530,7 +542,7 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
             }
           }
         } catch (parseError) {
-          console.log('📊 Could not parse I2I error response:', parseError);
+          log.warn('Could not parse I2I error response', { parseError });
         }
       }
     }
