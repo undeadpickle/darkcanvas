@@ -112,7 +112,10 @@ export function ImageDisplay({ generation, onUseAsSource }: ImageDisplayProps) {
                   <div className="flex gap-2 flex-shrink-0">
                     {onUseAsSource && (
                       <Button
-                        onClick={() => onUseAsSource(image)}
+                        onClick={() => onUseAsSource({
+                          ...image,
+                          aspectRatio: generation.aspectRatio // Include the aspect ratio from the generation
+                        })}
                         variant="outline"
                         size="sm"
                       >

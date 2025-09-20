@@ -6,6 +6,7 @@ export interface GeneratedImage {
   url: string;
   width: number;
   height: number;
+  aspectRatio?: string; // The aspect ratio value used during generation (e.g., "landscape_16_9")
 }
 
 export interface SourceImage {
@@ -28,6 +29,7 @@ export interface ImageGeneration {
   seed?: number;
   strength?: number; // For image-to-image transformation intensity
   usage?: OpenAIUsage; // For BYOK models
+  aspectRatio?: string; // The aspect ratio value used during generation
   createdAt: Date;
 }
 

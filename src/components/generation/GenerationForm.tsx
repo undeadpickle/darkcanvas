@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateImage, generateImageFromImage, isConfigured, getOpenAIKeyFromEnv } from '@/lib/fal';
-import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO, detectAspectRatio } from '@/lib/models';
+import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO, detectAspectRatio, getDimensionsFromAspectRatio } from '@/lib/models';
 import { ImageUpload } from './ImageUpload';
 import { OpenAIKeyInput } from './OpenAIKeyInput';
 import { ModelSelector } from './ModelSelector';
@@ -59,14 +59,33 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
       // Set as source image
       setSourceImage(sourceImageFromGenerated);
 
-      // Auto-detect aspect ratio
-      const detectedRatio = detectAspectRatio(externalSourceImage.width, externalSourceImage.height);
-      setSelectedAspectRatio(detectedRatio.value);
+      // Use stored aspect ratio if available, otherwise detect from dimensions
+      let aspectRatioToUse: string;
+      if (externalSourceImage.aspectRatio) {
+        // Use the stored aspect ratio from the original generation
+        aspectRatioToUse = externalSourceImage.aspectRatio;
 
-      log.info('External source image processed', {
-        dimensions: `${externalSourceImage.width}x${externalSourceImage.height}`,
-        detectedRatio: detectedRatio.name
-      });
+        // Update the source image dimensions to match the aspect ratio (for consistency)
+        const correctDimensions = getDimensionsFromAspectRatio(externalSourceImage.aspectRatio);
+        sourceImageFromGenerated.width = correctDimensions.width;
+        sourceImageFromGenerated.height = correctDimensions.height;
+
+        log.info('Using stored aspect ratio from external source image', {
+          aspectRatio: externalSourceImage.aspectRatio,
+          correctedDimensions: `${correctDimensions.width}x${correctDimensions.height}`
+        });
+      } else {
+        // Fall back to detecting aspect ratio from dimensions (backward compatibility)
+        const detectedRatio = detectAspectRatio(externalSourceImage.width, externalSourceImage.height);
+        aspectRatioToUse = detectedRatio.value;
+
+        log.info('Detected aspect ratio from external source image dimensions', {
+          dimensions: `${externalSourceImage.width}x${externalSourceImage.height}`,
+          detectedRatio: detectedRatio.name
+        });
+      }
+
+      setSelectedAspectRatio(aspectRatioToUse);
 
       // Notify that the external source image has been processed
       onExternalSourceImageProcessed?.();
@@ -187,6 +206,7 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
           numInferenceSteps: 4,
           imageFormat: 'png',
           openaiApiKey: currentModel?.requiresOpenAIKey ? openaiApiKey : undefined,
+          aspectRatio: selectedAspectRatio,
         });
       } else {
         // Image-to-image generation
@@ -205,6 +225,7 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
           numInferenceSteps: 4,
           imageFormat: 'png',
           openaiApiKey: currentModel?.requiresOpenAIKey ? openaiApiKey : undefined,
+          aspectRatio: selectedAspectRatio,
         });
       }
 
@@ -214,6 +235,7 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
         status: 'complete',
         seed: result.seed,
         usage: result.usage, // Include usage data for BYOK models
+        aspectRatio: result.aspectRatio || selectedAspectRatio, // Include aspect ratio used for generation
       };
 
       onGeneration(completedGeneration);

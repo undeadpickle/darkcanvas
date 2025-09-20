@@ -134,6 +134,29 @@ export const ASPECT_RATIOS: AspectRatioConfig[] = [
 export const DEFAULT_ASPECT_RATIO = ASPECT_RATIOS[0];
 
 /**
+ * Get dimensions for a given aspect ratio value
+ */
+export function getDimensionsFromAspectRatio(aspectRatioValue: string): { width: number; height: number } {
+  const aspectRatio = ASPECT_RATIOS.find(r => r.value === aspectRatioValue);
+  if (!aspectRatio) {
+    // Return default square dimensions
+    return { width: 1024, height: 1024 };
+  }
+
+  // Parse dimensions from description (e.g., "1920×1080")
+  const match = aspectRatio.description.match(/(\d+)×(\d+)/);
+  if (match) {
+    return {
+      width: parseInt(match[1], 10),
+      height: parseInt(match[2], 10)
+    };
+  }
+
+  // Fallback to default
+  return { width: 1024, height: 1024 };
+}
+
+/**
  * Detect the best matching aspect ratio for given image dimensions
  */
 export function detectAspectRatio(width: number, height: number): AspectRatioConfig {

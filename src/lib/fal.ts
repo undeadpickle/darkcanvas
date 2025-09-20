@@ -1,6 +1,6 @@
 import * as fal from "@fal-ai/serverless-client";
 import { log } from "./logger";
-import { DEFAULT_TEXT_TO_IMAGE_MODEL, getModelById } from "./models";
+import { DEFAULT_TEXT_TO_IMAGE_MODEL, getModelById, getDimensionsFromAspectRatio } from "./models";
 import type { SourceImage, OpenAIUsage } from "@/types";
 import type { FalApiError, FalImageResponse, FalApiErrorDetail } from "./api-types";
 
@@ -20,6 +20,14 @@ function getOpenAIApiKey(): string | null {
     return null;
   }
   return apiKey;
+}
+
+// Get correct dimensions for aspect ratio, with fallback to 1024x1024
+function getCorrectDimensions(aspectRatio?: string): { width: number; height: number } {
+  if (aspectRatio) {
+    return getDimensionsFromAspectRatio(aspectRatio);
+  }
+  return { width: 1024, height: 1024 };
 }
 
 // Configure fal client with API key from environment
@@ -42,6 +50,7 @@ export interface GenerationRequest {
   numInferenceSteps?: number;
   imageFormat?: string;
   openaiApiKey?: string; // For BYOK models
+  aspectRatio?: string; // To track the aspect ratio used during generation
 }
 
 export interface ImageToImageRequest {
@@ -55,6 +64,7 @@ export interface ImageToImageRequest {
   numInferenceSteps?: number;
   imageFormat?: string;
   openaiApiKey?: string; // For BYOK models
+  aspectRatio?: string; // To track the aspect ratio used during generation
 }
 
 export interface GenerationResult {
@@ -66,6 +76,7 @@ export interface GenerationResult {
   timings: Record<string, number>;
   seed: number;
   usage?: OpenAIUsage; // For BYOK models
+  aspectRatio?: string; // The aspect ratio used during generation
 }
 
 // Generate image using specified model
@@ -172,10 +183,11 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
         // GPT models should return { images: [{ url: "..." }], usage: {...} }
         if (resultAny.images && Array.isArray(resultAny.images)) {
           console.log('✅ Found GPT images array:', resultAny.images);
+          const correctDimensions = getCorrectDimensions(request.aspectRatio);
           images = resultAny.images.map((img: FalImageResponse | string) => ({
             url: typeof img === 'string' ? img : img.url,
-            width: typeof img === 'string' ? 1024 : (img.width || 1024),
-            height: typeof img === 'string' ? 1024 : (img.height || 1024)
+            width: typeof img === 'string' ? correctDimensions.width : (img.width || correctDimensions.width),
+            height: typeof img === 'string' ? correctDimensions.height : (img.height || correctDimensions.height)
           }));
         } else {
           console.log('❌ GPT images not found in expected format');
@@ -183,32 +195,33 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
         }
       } else {
         // Handle other model formats
+        const correctDimensions = getCorrectDimensions(request.aspectRatio);
         if (resultAny.image) {
           // Handle single image object (WAN model format)
           if (typeof resultAny.image === 'object' && resultAny.image !== null && 'url' in resultAny.image) {
             const imageObj = resultAny.image as Record<string, unknown>;
             images = [{
               url: imageObj.url as string,
-              width: (imageObj.width as number) || 1024,
-              height: (imageObj.height as number) || 1024
+              width: (imageObj.width as number) || correctDimensions.width,
+              height: (imageObj.height as number) || correctDimensions.height
             }];
           } else if (typeof resultAny.image === 'string') {
             // Handle single image URL string
-            images = [{ url: resultAny.image, width: 1024, height: 1024 }];
+            images = [{ url: resultAny.image, width: correctDimensions.width, height: correctDimensions.height }];
           }
         } else if (resultAny.output) {
         // Handle output field
         const output = resultAny.output;
         if (Array.isArray(output)) {
           images = output.map(img =>
-            typeof img === 'string' ? { url: img, width: 1024, height: 1024 } : img
+            typeof img === 'string' ? { url: img, width: correctDimensions.width, height: correctDimensions.height } : img
           );
         } else if (typeof output === 'string') {
-          images = [{ url: output, width: 1024, height: 1024 }];
+          images = [{ url: output, width: correctDimensions.width, height: correctDimensions.height }];
         }
         } else if (resultAny.url) {
           // Handle direct URL field
-          images = [{ url: resultAny.url as string, width: 1024, height: 1024 }];
+          images = [{ url: resultAny.url as string, width: correctDimensions.width, height: correctDimensions.height }];
         }
       }
 
@@ -229,11 +242,17 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
       }
     }
 
+    // Include the aspect ratio used for generation
+    if (request.aspectRatio) {
+      typedResult.aspectRatio = request.aspectRatio;
+    }
+
     log.info('Image generation completed', {
       imageCount: typedResult.images?.length || 0,
       seed: typedResult.seed,
       model: modelId,
-      hasUsage: !!typedResult.usage
+      hasUsage: !!typedResult.usage,
+      aspectRatio: typedResult.aspectRatio
     });
 
     return typedResult;
@@ -411,32 +430,33 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
       const resultAny = result as Record<string, unknown>;
       let images: Array<{ url: string; width: number; height: number }> = [];
 
+      const correctDimensions = getCorrectDimensions(request.aspectRatio);
       if (resultAny.image) {
         // Handle single image object (WAN model format)
         if (typeof resultAny.image === 'object' && resultAny.image !== null && 'url' in resultAny.image) {
           const imageObj = resultAny.image as Record<string, unknown>;
           images = [{
             url: imageObj.url as string,
-            width: (imageObj.width as number) || 1024,
-            height: (imageObj.height as number) || 1024
+            width: (imageObj.width as number) || correctDimensions.width,
+            height: (imageObj.height as number) || correctDimensions.height
           }];
         } else if (typeof resultAny.image === 'string') {
           // Handle single image URL string
-          images = [{ url: resultAny.image, width: 1024, height: 1024 }];
+          images = [{ url: resultAny.image, width: correctDimensions.width, height: correctDimensions.height }];
         }
       } else if (resultAny.output) {
         // Handle output field
         const output = resultAny.output;
         if (Array.isArray(output)) {
           images = output.map(img =>
-            typeof img === 'string' ? { url: img, width: 1024, height: 1024 } : img
+            typeof img === 'string' ? { url: img, width: correctDimensions.width, height: correctDimensions.height } : img
           );
         } else if (typeof output === 'string') {
-          images = [{ url: output, width: 1024, height: 1024 }];
+          images = [{ url: output, width: correctDimensions.width, height: correctDimensions.height }];
         }
       } else if (resultAny.url) {
         // Handle direct URL field
-        images = [{ url: resultAny.url as string, width: 1024, height: 1024 }];
+        images = [{ url: resultAny.url as string, width: correctDimensions.width, height: correctDimensions.height }];
       }
 
       if (images.length > 0) {
@@ -456,11 +476,17 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
       }
     }
 
+    // Include the aspect ratio used for generation
+    if (request.aspectRatio) {
+      typedResult.aspectRatio = request.aspectRatio;
+    }
+
     log.info('Image-to-image generation completed', {
       imageCount: typedResult.images?.length || 0,
       seed: typedResult.seed,
       model: request.modelId,
-      hasUsage: !!typedResult.usage
+      hasUsage: !!typedResult.usage,
+      aspectRatio: typedResult.aspectRatio
     });
 
     return typedResult;
