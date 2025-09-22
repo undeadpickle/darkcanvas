@@ -35,7 +35,6 @@ If needed: `/agents` in Claude Code creates them automatically
 
 - Multi-file edits and refactoring
 - Running tests and debugging
-- Git operations and PR creation
 - Exploring unfamiliar codebases
 - Batch operations across files
 
@@ -284,18 +283,6 @@ mcp__playwright__browser_snapshot
 - You're creating a "system" or "framework"
 - You're thinking about "other users"
 - You haven't committed in 2+ hours
-
-## Git Workflow
-
-```bash
-# Simple commits, often
-git add .
-git commit -m "feat: generate button works"
-git push
-
-# Not this
-git commit -m "feat: implement abstract generation service with strategy pattern and dependency injection for future extensibility"
-```
 
 ## Quick Command Reference
 
