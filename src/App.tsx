@@ -5,12 +5,14 @@ import { configureFal, isConfigured } from './lib/fal';
 import { GenerationForm } from './components/generation/GenerationForm';
 import { ImageDisplay } from './components/generation/ImageDisplay';
 import { VideoDisplay } from './components/generation/VideoDisplay';
+import { VideoGenerationForm } from './components/generation/VideoGenerationForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
-import type { ImageGeneration, GeneratedImage } from './types';
+import type { ImageGeneration, GeneratedImage, VideoGeneration } from './types';
 
 function App() {
   const [currentGeneration, setCurrentGeneration] = useState<ImageGeneration | null>(null);
+  const [currentVideoGeneration, setCurrentVideoGeneration] = useState<VideoGeneration | null>(null);
   const [externalSourceImage, setExternalSourceImage] = useState<GeneratedImage | null>(null);
 
   useEffect(() => {
@@ -27,6 +29,10 @@ function App() {
 
   const handleGeneration = (generation: ImageGeneration) => {
     setCurrentGeneration(generation);
+  };
+
+  const handleVideoGeneration = (generation: VideoGeneration) => {
+    setCurrentVideoGeneration(generation);
   };
 
   const handleUseAsSource = (image: GeneratedImage) => {
@@ -97,7 +103,30 @@ function App() {
             </TabsContent>
 
             <TabsContent value="video" className="space-y-8 mt-8">
-              <VideoDisplay />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Video Generation Form */}
+                <div>
+                  <Card className="w-full max-w-2xl mx-auto">
+                    <CardHeader className="text-center">
+                      <CardTitle className="flex items-center justify-center space-x-2">
+                        <Video className="w-6 h-6 text-primary" />
+                        <span>Generate Video</span>
+                      </CardTitle>
+                      <CardDescription>
+                        Create videos with AI from text descriptions
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <VideoGenerationForm onGeneration={handleVideoGeneration} />
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Video Display */}
+                <div>
+                  <VideoDisplay generation={currentVideoGeneration} />
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         </main>

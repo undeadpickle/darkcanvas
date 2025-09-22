@@ -3,21 +3,32 @@
 
 import type { GenerationType } from '@/types';
 
+export interface VideoConfig {
+  durations: string[];
+  resolutions: string[];
+  aspectRatios: string[];
+  supportsAudio: boolean;
+  defaultDuration: string;
+  defaultResolution: string;
+  defaultAspectRatio: string;
+}
+
 export interface ModelConfig {
   id: string;
   name: string;
   description: string;
   costEstimate: string;
   generationType: GenerationType;
-  inputFormat: 'image_url' | 'image_urls'; // For I2I models
+  inputFormat?: 'image_url' | 'image_urls'; // For I2I models (not needed for video)
   requiresOpenAIKey?: boolean; // For BYOK models
-  resolutionSupport: 'custom' | 'presets-only' | 'none';
+  resolutionSupport?: 'custom' | 'presets-only' | 'none'; // Not used for video models
   supportedAspectRatios?: string[]; // Aspect ratio IDs that this model supports
   resolutionConstraints?: {
     minSize?: number;
     maxSize?: number;
     fixedPresets?: string[];
   };
+  videoConfig?: VideoConfig; // For video models
 }
 
 // Text-to-Image Models
@@ -28,7 +39,6 @@ export const TEXT_TO_IMAGE_MODELS: ModelConfig[] = [
     description: "Fast and cheap - great for testing",
     costEstimate: "Free ~$0/image",
     generationType: "text-to-image",
-    inputFormat: "image_url", // Not used for T2I
     resolutionSupport: "custom" // No constraints
   },
   {
@@ -37,7 +47,6 @@ export const TEXT_TO_IMAGE_MODELS: ModelConfig[] = [
     description: "Higher quality generation",
     costEstimate: "Low cost ~$0.03/image",
     generationType: "text-to-image",
-    inputFormat: "image_url", // Not used for T2I
     resolutionSupport: "custom",
     resolutionConstraints: {
       minSize: 1024,
@@ -50,7 +59,6 @@ export const TEXT_TO_IMAGE_MODELS: ModelConfig[] = [
     description: "OpenAI's DALL-E - Requires your OpenAI API key",
     costEstimate: "BYOK - Uses your OpenAI billing",
     generationType: "text-to-image",
-    inputFormat: "image_url",
     requiresOpenAIKey: true,
     resolutionSupport: "presets-only",
     supportedAspectRatios: ["square_hd", "landscape_4_3", "landscape_16_9", "portrait_4_3", "portrait_16_9"],
@@ -101,15 +109,37 @@ export const IMAGE_TO_IMAGE_MODELS: ModelConfig[] = [
   }
 ];
 
+// Video Models
+export const VIDEO_MODELS: ModelConfig[] = [
+  {
+    id: "fal-ai/veo3/fast",
+    name: "Veo 3 Fast",
+    description: "Google's fast video generation model",
+    costEstimate: "Low-Medium ~$0.20-$0.96/video",
+    generationType: "text-to-video",
+    videoConfig: {
+      durations: ["4s", "6s", "8s"],
+      resolutions: ["720p", "1080p"],
+      aspectRatios: ["16:9", "9:16", "1:1"],
+      supportsAudio: true,
+      defaultDuration: "8s",
+      defaultResolution: "720p",
+      defaultAspectRatio: "16:9"
+    }
+  }
+];
+
 // Combined model list
 export const AVAILABLE_MODELS: ModelConfig[] = [
   ...TEXT_TO_IMAGE_MODELS,
-  ...IMAGE_TO_IMAGE_MODELS
+  ...IMAGE_TO_IMAGE_MODELS,
+  ...VIDEO_MODELS
 ];
 
 // Default models
 export const DEFAULT_TEXT_TO_IMAGE_MODEL = TEXT_TO_IMAGE_MODELS[0];
 export const DEFAULT_IMAGE_TO_IMAGE_MODEL = IMAGE_TO_IMAGE_MODELS[0];
+export const DEFAULT_VIDEO_MODEL = VIDEO_MODELS[0];
 
 export function getModelById(id: string): ModelConfig | undefined {
   return AVAILABLE_MODELS.find(model => model.id === id);
@@ -297,4 +327,58 @@ export function getGPTCompatibleSize(aspectRatio: string): string {
 export function isAspectRatioSupported(modelId: string, aspectRatioId: string): boolean {
   const supportedRatios = getSupportedAspectRatios(modelId);
   return supportedRatios.includes(aspectRatioId);
+}
+
+/**
+ * Get video configuration for a video model
+ */
+export function getVideoConfig(modelId: string): VideoConfig | undefined {
+  const model = getModelById(modelId);
+  return model?.videoConfig;
+}
+
+/**
+ * Check if a model is a video model
+ */
+export function isVideoModel(modelId: string): boolean {
+  const model = getModelById(modelId);
+  return model?.generationType === 'text-to-video';
+}
+
+/**
+ * Calculate estimated video cost based on duration and audio setting
+ */
+export function calculateVideoCost(duration: string, hasAudio: boolean): { min: number; max: number } {
+  const seconds = parseInt(duration);
+  const basePerSecond = hasAudio ? 0.12 : 0.08; // $0.08-0.12/second with audio, 33% less without
+  const minPerSecond = hasAudio ? 0.08 : 0.05;
+
+  return {
+    min: Math.round(minPerSecond * seconds * 100) / 100,
+    max: Math.round(basePerSecond * seconds * 100) / 100
+  };
+}
+
+/**
+ * Get supported video durations for a model
+ */
+export function getSupportedVideoDurations(modelId: string): string[] {
+  const config = getVideoConfig(modelId);
+  return config?.durations || [];
+}
+
+/**
+ * Get supported video resolutions for a model
+ */
+export function getSupportedVideoResolutions(modelId: string): string[] {
+  const config = getVideoConfig(modelId);
+  return config?.resolutions || [];
+}
+
+/**
+ * Get supported video aspect ratios for a model
+ */
+export function getSupportedVideoAspectRatios(modelId: string): string[] {
+  const config = getVideoConfig(modelId);
+  return config?.aspectRatios || [];
 }

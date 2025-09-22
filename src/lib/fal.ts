@@ -1,7 +1,7 @@
 import * as fal from "@fal-ai/serverless-client";
 import { log } from "./logger";
 import { DEFAULT_TEXT_TO_IMAGE_MODEL, getModelById, getDimensionsFromAspectRatio, getValidDimensions, getGPTCompatibleSize } from "./models";
-import type { SourceImage, OpenAIUsage } from "@/types";
+import type { SourceImage, OpenAIUsage, GeneratedVideo, VideoGenerationSettings } from "@/types";
 import type { FalApiError, FalImageResponse, FalApiErrorDetail } from "./api-types";
 
 // Get API key from environment variable
@@ -576,6 +576,102 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
         } catch (parseError) {
           log.warn('Could not parse I2I error response', { parseError });
         }
+      }
+    }
+
+    throw error;
+  }
+}
+
+// Generate video using fal.ai veo3/fast model
+export async function generateVideo(
+  prompt: string,
+  settings?: Partial<VideoGenerationSettings>
+): Promise<GeneratedVideo> {
+  log.info('Starting video generation', { prompt, settings });
+
+  try {
+    const apiKey = getApiKey();
+    fal.config({ credentials: apiKey });
+
+    const finalSettings: VideoGenerationSettings = {
+      duration: settings?.duration || "8s",
+      resolution: settings?.resolution || "720p",
+      aspectRatio: settings?.aspectRatio || "16:9",
+      generateAudio: settings?.generateAudio ?? true,
+      enhancePrompt: settings?.enhancePrompt ?? true,
+      autoFix: settings?.autoFix ?? true,
+      ...settings
+    };
+
+    log.info('Video generation request', {
+      prompt,
+      settings: finalSettings
+    });
+
+    const result = await fal.subscribe("fal-ai/veo3/fast", {
+      input: {
+        prompt,
+        duration: finalSettings.duration,
+        resolution: finalSettings.resolution,
+        aspect_ratio: finalSettings.aspectRatio,
+        generate_audio: finalSettings.generateAudio,
+        enhance_prompt: finalSettings.enhancePrompt,
+        auto_fix: finalSettings.autoFix,
+        negative_prompt: finalSettings.negativePrompt,
+        seed: finalSettings.seed
+      },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          const logs = update.logs || [];
+          logs.forEach(logEntry => {
+            log.info('Video generation progress', { message: logEntry.message });
+          });
+        }
+      }
+    });
+
+    log.info('Video generation result', { result });
+
+    // Handle the video response
+    const resultData = result as { video?: { url: string } };
+
+    if (!resultData.video?.url) {
+      throw new Error('No video returned from API');
+    }
+
+    const generatedVideo: GeneratedVideo = {
+      url: resultData.video.url,
+      duration: finalSettings.duration,
+      resolution: finalSettings.resolution,
+      aspectRatio: finalSettings.aspectRatio
+    };
+
+    log.info('Video generation completed successfully', {
+      url: generatedVideo.url,
+      duration: generatedVideo.duration,
+      resolution: generatedVideo.resolution,
+      aspectRatio: generatedVideo.aspectRatio
+    });
+
+    return generatedVideo;
+
+  } catch (error) {
+    log.error('Video generation failed', { error, prompt });
+
+    // Handle specific API errors
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        throw new Error('Invalid or missing Fal.ai API key. Please check your .env file.');
+      }
+
+      if (error.message.includes('quota') || error.message.includes('billing')) {
+        throw new Error('Insufficient credits or billing issue. Please check your Fal.ai account.');
+      }
+
+      if (error.message.includes('content policy')) {
+        throw new Error('Video generation failed due to content policy restrictions. Please modify your prompt.');
       }
     }
 

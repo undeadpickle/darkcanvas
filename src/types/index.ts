@@ -1,6 +1,6 @@
-// Core types for DarkCanvas Phase 1 MVP + Image-to-Image
+// Core types for DarkCanvas Phase 1 MVP + Image-to-Image + Video Generation
 
-export type GenerationType = 'text-to-image' | 'image-to-image';
+export type GenerationType = 'text-to-image' | 'image-to-image' | 'text-to-video';
 
 export interface GeneratedImage {
   url: string;
@@ -43,6 +43,36 @@ export interface OpenAIUsage {
   };
 }
 
+
+export interface GeneratedVideo {
+  url: string;
+  duration: string;
+  resolution: string;
+  aspectRatio: string;
+}
+
+export interface VideoGenerationSettings {
+  duration: '4s' | '6s' | '8s';
+  resolution: '720p' | '1080p';
+  aspectRatio: '16:9' | '9:16' | '1:1';
+  generateAudio: boolean;
+  enhancePrompt: boolean;
+  autoFix: boolean;
+  negativePrompt?: string;
+  seed?: number;
+}
+
+export interface VideoGeneration {
+  id: string;
+  prompt: string;
+  modelId: string;
+  generationType: 'text-to-video';
+  video?: GeneratedVideo;
+  status: 'pending' | 'generating' | 'complete' | 'error';
+  error?: string;
+  settings: VideoGenerationSettings;
+  createdAt: Date;
+}
 
 export interface GenerationFormData {
   prompt: string;

@@ -1,6 +1,6 @@
 # DarkCanvas
 
-A simple web interface for Fal.ai image generation with multiple AI models and aspect ratio options.
+A simple web interface for Fal.ai image and video generation with multiple AI models and aspect ratio options.
 
 ## 🚀 Quick Start
 
@@ -65,20 +65,22 @@ src/
 │       ├── UploadZone.tsx          # Upload area component
 │       ├── ImageDisplay.tsx         # Generated image display
 │       ├── OpenAIKeyInput.tsx      # OpenAI API key input
-│       └── VideoDisplay.tsx        # Video placeholder component
+│       ├── VideoGenerationForm.tsx  # Video generation form with auto-save
+│       └── VideoDisplay.tsx        # Generated video display
 ├── hooks/
 │   └── useGenerationState.ts       # Custom hook for generation state
 ├── lib/
-│   ├── fal.ts          # Fal.ai client (text-to-image & image-to-image)
-│   ├── models.ts       # Model configurations (5 total models)
+│   ├── fal.ts          # Fal.ai client (text-to-image, image-to-image & video generation)
+│   ├── models.ts       # Model configurations (5 image + 1 video model)
 │   ├── image-utils.ts  # Image upload and validation utilities
+│   ├── video-utils.ts  # Video download and utility functions
 │   ├── error-utils.ts  # User-friendly error message utilities
 │   ├── api-types.ts    # API response type definitions
 │   ├── logger.ts       # Simple logging
-│   ├── storage.ts      # localStorage utilities for preferences
+│   ├── storage.ts      # localStorage utilities for preferences (image & video)
 │   ├── directory-storage.ts  # IndexedDB for File System API handles
-│   ├── file-system.ts  # File System Access API utilities
-│   ├── download-utils.ts     # Auto-download functionality
+│   ├── file-system.ts  # File System Access API utilities (images & videos)
+│   ├── download-utils.ts     # Auto-download functionality (images & videos)
 │   └── utils.ts        # Utilities
 ├── types/              # TypeScript definitions
 └── index.css          # Global styles with default theme
@@ -105,6 +107,14 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 - ✅ **Resolution quality toggle** - Same high/low quality options for image-to-image generation
 - ✅ **Use generated image as source** - "Use in Image-to-Image" button allows seamless iteration
 
+### Video Generation
+- ✅ **Veo 3 Fast model** - Google's fast video generation model (4s/6s/8s duration options)
+- ✅ **Multiple aspect ratios** - 16:9, 9:16, 1:1 support
+- ✅ **Resolution options** - 720p and 1080p quality settings
+- ✅ **Audio generation** - Optional audio with 33% cost savings when disabled
+- ✅ **Advanced controls** - Prompt enhancement, auto-fix, negative prompts, and seed support
+- ✅ **Auto-save with folder selection** - Same enhanced auto-save system as images
+
 ### Core Features
 - ✅ Consolidated interface with Image/Video tabs
 - ✅ Mode toggle between text-to-image and image-to-image within Image tab
@@ -114,7 +124,7 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 - ✅ Error handling and loading states
 - ✅ Responsive design with shadcn/ui
 - ✅ Clean default theme with excellent contrast
-- ✅ Video placeholder tab for future features
+- ✅ **Full video generation capability** - Complete video creation workflow
 - ✅ Production-ready build with optimized bundle (404KB JS, 30KB CSS)
 
 ## 🔑 Environment

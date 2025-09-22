@@ -120,14 +120,16 @@ export async function ensureDirectoryPermission(): Promise<boolean> {
 }
 
 /**
- * Save an image to the selected directory
- * @param imageUrl - URL of the image to save
+ * Save a file to the selected directory (generic function for any file type)
+ * @param fileUrl - URL of the file to save
  * @param filename - Name to save the file as
+ * @param fileType - Type of file being saved (for logging)
  * @returns Promise<boolean> - true if successful
  */
-export async function saveImageToDirectory(
-  imageUrl: string,
-  filename: string
+export async function saveFileToDirectory(
+  fileUrl: string,
+  filename: string,
+  fileType: string = 'file'
 ): Promise<boolean> {
   try {
     const dirHandle = await getDirectoryHandle();
@@ -141,35 +143,48 @@ export async function saveImageToDirectory(
       throw new Error('No permission to write to directory');
     }
 
-    // Fetch the image
-    const response = await fetch(imageUrl);
+    // Fetch the file
+    const response = await fetch(fileUrl);
     if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.statusText}`);
+      throw new Error(`Failed to fetch ${fileType}: ${response.statusText}`);
     }
 
-    const imageBlob = await response.blob();
+    const fileBlob = await response.blob();
 
     // Create file handle
     const fileHandle = await dirHandle.getFileHandle(filename, {
       create: true
     });
 
-    // Write the image
+    // Write the file
     const writable = await fileHandle.createWritable();
-    await writable.write(imageBlob);
+    await writable.write(fileBlob);
     await writable.close();
 
-    log.info('Image saved to directory successfully', {
+    log.info(`${fileType.charAt(0).toUpperCase() + fileType.slice(1)} saved to directory successfully`, {
       filename,
       directory: dirHandle.name,
-      size: imageBlob.size
+      size: fileBlob.size
     });
 
     return true;
   } catch (error) {
-    log.error('Failed to save image to directory', { error, filename });
+    log.error(`Failed to save ${fileType} to directory`, { error, filename });
     return false;
   }
+}
+
+/**
+ * Save an image to the selected directory
+ * @param imageUrl - URL of the image to save
+ * @param filename - Name to save the file as
+ * @returns Promise<boolean> - true if successful
+ */
+export async function saveImageToDirectory(
+  imageUrl: string,
+  filename: string
+): Promise<boolean> {
+  return saveFileToDirectory(imageUrl, filename, 'image');
 }
 
 /**
@@ -203,6 +218,57 @@ export async function saveImagesToDirectory(
 
     // Small delay between saves
     if (i < images.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
+  return successCount;
+}
+
+/**
+ * Save a video to the selected directory
+ * @param videoUrl - URL of the video to save
+ * @param filename - Name to save the file as
+ * @returns Promise<boolean> - true if successful
+ */
+export async function saveVideoToDirectory(
+  videoUrl: string,
+  filename: string
+): Promise<boolean> {
+  return saveFileToDirectory(videoUrl, filename, 'video');
+}
+
+/**
+ * Save multiple videos to the selected directory
+ * @param videos - Array of video objects with url property
+ * @param prompt - The prompt used for naming
+ * @param modelId - The model ID used for naming
+ * @returns Promise<number> - Number of videos successfully saved
+ */
+export async function saveVideosToDirectory(
+  videos: Array<{ url: string; duration: string; resolution: string; aspectRatio: string }>,
+  prompt: string,
+  modelId: string
+): Promise<number> {
+  let successCount = 0;
+
+  for (let i = 0; i < videos.length; i++) {
+    const video = videos[i];
+
+    // Create filename using video-specific pattern
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const cleanPrompt = prompt.slice(0, 30).replace(/[^a-z0-9\s]/gi, '').replace(/\s+/g, '_');
+    const modelName = modelId.split('/').pop() || 'unknown';
+    const indexSuffix = videos.length > 1 ? `_${i + 1}` : '';
+    const filename = `darkcanvas_${modelName}_${cleanPrompt}_${video.duration}_${video.resolution}${indexSuffix}_${timestamp}.mp4`;
+
+    const success = await saveVideoToDirectory(video.url, filename);
+    if (success) {
+      successCount++;
+    }
+
+    // Small delay between saves
+    if (i < videos.length - 1) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
