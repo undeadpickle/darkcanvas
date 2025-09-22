@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Skull, Loader2, Image as ImageIcon, Type } from 'lucide-react';
+import { Skull, Loader2, Image as ImageIcon, Type, Folder, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateImage, generateImageFromImage, isConfigured, getOpenAIKeyFromEnv } from '@/lib/fal';
-import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO, detectAspectRatio, getDimensionsFromAspectRatio, getDimensionsForQuality } from '@/lib/models';
+import { getModelsByType, getModelById, DEFAULT_TEXT_TO_IMAGE_MODEL, DEFAULT_IMAGE_TO_IMAGE_MODEL, ASPECT_RATIOS, DEFAULT_ASPECT_RATIO, detectAspectRatio, getDimensionsFromAspectRatio, getDimensionsFromConfig, getSupportedAspectRatios } from '@/lib/models';
 import { ImageUpload } from './ImageUpload';
 import { OpenAIKeyInput } from './OpenAIKeyInput';
 import { ModelSelector } from './ModelSelector';
 import { AspectRatioSelector } from './AspectRatioSelector';
-import { ResolutionToggle } from './ResolutionToggle';
 import { GenerationStatus } from './GenerationStatus';
 import { log } from '@/lib/logger';
 import { getUserFriendlyError } from '@/lib/error-utils';
+import { getAutoDownloadPreference, setAutoDownloadPreference, getUseDirectoryPickerPreference, getDirectoryName } from '@/lib/storage';
+import { downloadImages } from '@/lib/download-utils';
+import { selectSaveDirectory, getCurrentDirectoryInfo, saveImagesToDirectory, isFileSystemAccessSupported, clearSelectedDirectory } from '@/lib/file-system';
 import type { ImageGeneration, GenerationType, SourceImage, GeneratedImage } from '@/types';
 
 interface GenerationFormProps {
@@ -27,12 +30,15 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
   const [prompt, setPrompt] = useState('');
   const [selectedModel, setSelectedModel] = useState(DEFAULT_TEXT_TO_IMAGE_MODEL.id);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState(DEFAULT_ASPECT_RATIO.value);
-  const [useHighResolution, setUseHighResolution] = useState(true);
   const [sourceImage, setSourceImage] = useState<SourceImage | null>(null);
   const [strength, setStrength] = useState([0.8]); // Slider expects array
   const [openaiApiKey, setOpenaiApiKey] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoDownload, setAutoDownload] = useState(false);
+  const [useDirectoryPicker, setUseDirectoryPicker] = useState(false);
+  const [selectedDirectoryName, setSelectedDirectoryName] = useState<string | null>(null);
+  const [fileSystemSupported, setFileSystemSupported] = useState(false);
 
   // Initialize OpenAI API key from environment on mount
   useEffect(() => {
@@ -40,6 +46,47 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
     if (envKey) {
       setOpenaiApiKey(envKey);
       log.info('OpenAI API key loaded from environment');
+    }
+  }, []);
+
+  // Load auto-download preference from localStorage on mount
+  useEffect(() => {
+    const autoDownloadEnabled = getAutoDownloadPreference();
+    setAutoDownload(autoDownloadEnabled);
+  }, []);
+
+  // Save auto-download preference when it changes
+  useEffect(() => {
+    setAutoDownloadPreference(autoDownload);
+  }, [autoDownload]);
+
+  // Check File System Access API support and load directory preferences
+  useEffect(() => {
+    const supported = isFileSystemAccessSupported();
+    setFileSystemSupported(supported);
+
+    if (supported) {
+      // Load directory picker preference
+      const useDirectory = getUseDirectoryPickerPreference();
+      setUseDirectoryPicker(useDirectory);
+
+      // Load directory name
+      const directoryName = getDirectoryName();
+      setSelectedDirectoryName(directoryName);
+
+      // Check current directory info
+      getCurrentDirectoryInfo().then(info => {
+        if (info && info.hasPermission) {
+          setSelectedDirectoryName(info.name);
+          setUseDirectoryPicker(true);
+        } else if (info && !info.hasPermission && info.permissionState === 'prompt') {
+          // Directory was selected before but permission lost, keep name but disable functionality
+          setSelectedDirectoryName(info.name);
+          setUseDirectoryPicker(false);
+        }
+      }).catch(error => {
+        log.error('Failed to check directory info on mount', { error });
+      });
     }
   }, []);
 
@@ -144,6 +191,40 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
     }
   };
 
+  // Handle folder selection
+  const handleSelectFolder = async () => {
+    if (!fileSystemSupported) {
+      setError('File System Access API not supported in this browser');
+      return;
+    }
+
+    try {
+      const directoryName = await selectSaveDirectory();
+      if (directoryName) {
+        setSelectedDirectoryName(directoryName);
+        setUseDirectoryPicker(true);
+        setAutoDownload(true); // Enable auto-save when folder is selected
+        log.info('Folder selected for auto-save', { directoryName });
+      }
+    } catch (error) {
+      log.error('Failed to select folder', { error });
+      setError('Failed to select folder. Please try again.');
+    }
+  };
+
+  // Handle clearing the selected folder
+  const handleClearFolder = async () => {
+    try {
+      await clearSelectedDirectory();
+      setSelectedDirectoryName(null);
+      setUseDirectoryPicker(false);
+      log.info('Selected folder cleared');
+    } catch (error) {
+      log.error('Failed to clear folder', { error });
+      setError('Failed to clear folder selection.');
+    }
+  };
+
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       setError('Please enter a prompt');
@@ -187,7 +268,6 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
       strength: generationType === 'image-to-image' ? strength[0] : undefined,
       images: [],
       status: 'generating',
-      resolutionQuality: useHighResolution ? 'high' : 'low',
       createdAt: new Date(),
     };
 
@@ -200,9 +280,8 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
         model: selectedModel
       });
 
-      // Get the dimensions for the selected quality
-      const quality = useHighResolution ? 'high' : 'low';
-      const dimensions = getDimensionsForQuality(currentAspectRatio, quality);
+      // Get the dimensions for the selected aspect ratio
+      const dimensions = getDimensionsFromConfig(currentAspectRatio);
 
       let result;
 
@@ -218,7 +297,6 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
           imageFormat: 'png',
           openaiApiKey: currentModel?.requiresOpenAIKey ? openaiApiKey : undefined,
           aspectRatio: selectedAspectRatio,
-          resolutionQuality: quality,
         });
       } else {
         // Image-to-image generation
@@ -239,7 +317,6 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
           imageFormat: 'png',
           openaiApiKey: currentModel?.requiresOpenAIKey ? openaiApiKey : undefined,
           aspectRatio: selectedAspectRatio,
-          resolutionQuality: quality,
         });
       }
 
@@ -259,6 +336,41 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
         type: generationType,
         imageCount: result.images.length
       });
+
+      // Auto-save if enabled
+      if (autoDownload && result.images.length > 0) {
+        try {
+          // Use directory saving if available and folder is selected
+          if (useDirectoryPicker && selectedDirectoryName) {
+            const savedCount = await saveImagesToDirectory(result.images, prompt.trim(), selectedModel);
+            log.info('Auto-saved images to directory', {
+              count: savedCount,
+              total: result.images.length,
+              directory: selectedDirectoryName,
+              model: selectedModel
+            });
+
+            // If not all images were saved, fall back to download
+            if (savedCount < result.images.length) {
+              const failedImages = result.images.slice(savedCount);
+              await downloadImages(failedImages, prompt.trim(), selectedModel);
+              log.info('Fell back to download for remaining images', {
+                downloadedCount: failedImages.length
+              });
+            }
+          } else {
+            // Fall back to download dialog method
+            await downloadImages(result.images, prompt.trim(), selectedModel);
+            log.info('Auto-downloaded generated images', {
+              count: result.images.length,
+              model: selectedModel
+            });
+          }
+        } catch (saveError) {
+          log.error('Failed to auto-save images', { saveError });
+          // Don't show error to user - generation was successful, save failure is secondary
+        }
+      }
 
     } catch (err) {
       const originalError = err instanceof Error ? err.message : 'Generation failed';
@@ -327,19 +439,16 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
               currentModel={currentModel}
               disabled={isGenerating}
             />
-            <ResolutionToggle
-              useHighResolution={useHighResolution}
-              onToggle={setUseHighResolution}
-              selectedAspectRatio={currentAspectRatio}
-              disabled={isGenerating}
-            />
-            <AspectRatioSelector
-              selectedAspectRatio={selectedAspectRatio}
-              onAspectRatioChange={setSelectedAspectRatio}
-              aspectRatios={ASPECT_RATIOS}
-              useHighResolution={useHighResolution}
-              disabled={isGenerating}
-            />
+            {/* Hide aspect ratio selector for models that don't support it (e.g., Nano-Banana) */}
+            {getSupportedAspectRatios(selectedModel).length > 0 && (
+              <AspectRatioSelector
+                selectedAspectRatio={selectedAspectRatio}
+                onAspectRatioChange={setSelectedAspectRatio}
+                aspectRatios={ASPECT_RATIOS}
+                selectedModelId={selectedModel}
+                disabled={isGenerating}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="image-to-image" className="space-y-6 mt-6">
@@ -350,19 +459,16 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
               currentModel={currentModel}
               disabled={isGenerating}
             />
-            <ResolutionToggle
-              useHighResolution={useHighResolution}
-              onToggle={setUseHighResolution}
-              selectedAspectRatio={currentAspectRatio}
-              disabled={isGenerating}
-            />
-            <AspectRatioSelector
-              selectedAspectRatio={selectedAspectRatio}
-              onAspectRatioChange={setSelectedAspectRatio}
-              aspectRatios={ASPECT_RATIOS}
-              useHighResolution={useHighResolution}
-              disabled={isGenerating}
-            />
+            {/* Hide aspect ratio selector for models that don't support it (e.g., Nano-Banana) */}
+            {getSupportedAspectRatios(selectedModel).length > 0 && (
+              <AspectRatioSelector
+                selectedAspectRatio={selectedAspectRatio}
+                onAspectRatioChange={setSelectedAspectRatio}
+                aspectRatios={ASPECT_RATIOS}
+                selectedModelId={selectedModel}
+                disabled={isGenerating}
+              />
+            )}
 
             {/* Image Upload */}
             <div className="space-y-2">
@@ -460,6 +566,71 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
             )}
           </div>
         )}
+
+        {/* Auto-Save Settings */}
+        <div className="space-y-3">
+          {/* Auto-save toggle */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="auto-download"
+              checked={autoDownload}
+              onCheckedChange={setAutoDownload}
+              disabled={isGenerating}
+            />
+            <label htmlFor="auto-download" className="text-sm text-muted-foreground cursor-pointer">
+              Auto-save images
+            </label>
+          </div>
+
+          {/* Folder selection (only show if File System API is supported and auto-save is enabled) */}
+          {fileSystemSupported && autoDownload && (
+            <div className="ml-6 space-y-2">
+              {!useDirectoryPicker || !selectedDirectoryName ? (
+                <div className="flex items-center space-x-2">
+                  <Folder className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Save to Downloads (default)</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectFolder}
+                    disabled={isGenerating}
+                  >
+                    Choose Folder
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <FolderOpen className="w-4 h-4 text-green-600" />
+                  <span className="text-sm text-foreground">Save to: {selectedDirectoryName}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectFolder}
+                    disabled={isGenerating}
+                  >
+                    Change
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearFolder}
+                    disabled={isGenerating}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Fallback message for unsupported browsers */}
+          {!fileSystemSupported && autoDownload && (
+            <div className="ml-6 text-sm text-muted-foreground">
+              <Folder className="w-4 h-4 inline mr-1" />
+              Images will be saved to your Downloads folder
+            </div>
+          )}
+        </div>
 
         {/* Generate Button */}
         <Button

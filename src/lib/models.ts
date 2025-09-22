@@ -11,6 +11,13 @@ export interface ModelConfig {
   generationType: GenerationType;
   inputFormat: 'image_url' | 'image_urls'; // For I2I models
   requiresOpenAIKey?: boolean; // For BYOK models
+  resolutionSupport: 'custom' | 'presets-only' | 'none';
+  supportedAspectRatios?: string[]; // Aspect ratio IDs that this model supports
+  resolutionConstraints?: {
+    minSize?: number;
+    maxSize?: number;
+    fixedPresets?: string[];
+  };
 }
 
 // Text-to-Image Models
@@ -21,7 +28,8 @@ export const TEXT_TO_IMAGE_MODELS: ModelConfig[] = [
     description: "Fast and cheap - great for testing",
     costEstimate: "Free ~$0/image",
     generationType: "text-to-image",
-    inputFormat: "image_url" // Not used for T2I
+    inputFormat: "image_url", // Not used for T2I
+    resolutionSupport: "custom" // No constraints
   },
   {
     id: "fal-ai/bytedance/seedream/v4/text-to-image",
@@ -29,7 +37,12 @@ export const TEXT_TO_IMAGE_MODELS: ModelConfig[] = [
     description: "Higher quality generation",
     costEstimate: "Low cost ~$0.03/image",
     generationType: "text-to-image",
-    inputFormat: "image_url" // Not used for T2I
+    inputFormat: "image_url", // Not used for T2I
+    resolutionSupport: "custom",
+    resolutionConstraints: {
+      minSize: 1024,
+      maxSize: 4096
+    }
   },
   {
     id: "fal-ai/gpt-image-1/text-to-image/byok",
@@ -38,7 +51,12 @@ export const TEXT_TO_IMAGE_MODELS: ModelConfig[] = [
     costEstimate: "BYOK - Uses your OpenAI billing",
     generationType: "text-to-image",
     inputFormat: "image_url",
-    requiresOpenAIKey: true
+    requiresOpenAIKey: true,
+    resolutionSupport: "presets-only",
+    supportedAspectRatios: ["square_hd", "landscape_4_3", "landscape_16_9", "portrait_4_3", "portrait_16_9"],
+    resolutionConstraints: {
+      fixedPresets: ["auto", "1024x1024", "1536x1024", "1024x1536"]
+    }
   }
 ];
 
@@ -50,7 +68,12 @@ export const IMAGE_TO_IMAGE_MODELS: ModelConfig[] = [
     description: "High-quality image editing and transformation",
     costEstimate: "Low cost ~$0.03/image",
     generationType: "image-to-image",
-    inputFormat: "image_urls"
+    inputFormat: "image_urls",
+    resolutionSupport: "custom",
+    resolutionConstraints: {
+      minSize: 1024,
+      maxSize: 4096
+    }
   },
   {
     id: "fal-ai/nano-banana/edit",
@@ -58,7 +81,9 @@ export const IMAGE_TO_IMAGE_MODELS: ModelConfig[] = [
     description: "Gemini-powered image editing",
     costEstimate: "Higher cost ~$0.039/image",
     generationType: "image-to-image",
-    inputFormat: "image_urls"
+    inputFormat: "image_urls",
+    resolutionSupport: "none", // Uses source image dimensions
+    supportedAspectRatios: [] // Hide aspect ratio selector for this model
   },
   {
     id: "fal-ai/gpt-image-1/edit-image/byok",
@@ -67,7 +92,12 @@ export const IMAGE_TO_IMAGE_MODELS: ModelConfig[] = [
     costEstimate: "BYOK - Uses your OpenAI billing",
     generationType: "image-to-image",
     inputFormat: "image_urls",
-    requiresOpenAIKey: true
+    requiresOpenAIKey: true,
+    resolutionSupport: "presets-only",
+    supportedAspectRatios: ["square_hd", "landscape_4_3", "landscape_16_9", "portrait_4_3", "portrait_16_9"],
+    resolutionConstraints: {
+      fixedPresets: ["auto", "1024x1024", "1536x1024", "1024x1536"]
+    }
   }
 ];
 
@@ -95,86 +125,68 @@ export interface AspectRatioConfig {
   name: string;
   value: string;
   description: string;
-  dimensions: {
-    high: { width: number; height: number };
-    low: { width: number; height: number };
-  };
+  dimensions: { width: number; height: number };
 }
 
 export const ASPECT_RATIOS: AspectRatioConfig[] = [
+  {
+    id: "portrait_16_9",
+    name: "Portrait 9:16",
+    value: "portrait_16_9",
+    description: "Mobile portrait",
+    dimensions: { width: 1080, height: 1920 }
+  },
   {
     id: "square_hd",
     name: "Square 1:1",
     value: "square_hd",
     description: "Square format",
-    dimensions: {
-      high: { width: 1024, height: 1024 },
-      low: { width: 768, height: 768 }
-    }
+    dimensions: { width: 1024, height: 1024 }
   },
   {
     id: "landscape_4_3",
     name: "Landscape 4:3",
     value: "landscape_4_3",
     description: "Standard landscape",
-    dimensions: {
-      high: { width: 1536, height: 1152 },
-      low: { width: 1024, height: 768 }
-    }
+    dimensions: { width: 1536, height: 1152 }
   },
   {
     id: "landscape_16_9",
     name: "Landscape 16:9",
     value: "landscape_16_9",
     description: "Widescreen format",
-    dimensions: {
-      high: { width: 1920, height: 1080 },
-      low: { width: 1024, height: 576 }
-    }
+    dimensions: { width: 1920, height: 1080 }
   },
   {
     id: "portrait_4_3",
     name: "Portrait 4:3",
     value: "portrait_4_3",
     description: "Standard portrait",
-    dimensions: {
-      high: { width: 1152, height: 1536 },
-      low: { width: 768, height: 1024 }
-    }
-  },
-  {
-    id: "portrait_16_9",
-    name: "Portrait 9:16",
-    value: "portrait_16_9",
-    description: "Mobile portrait",
-    dimensions: {
-      high: { width: 1080, height: 1920 },
-      low: { width: 576, height: 1024 }
-    }
+    dimensions: { width: 1152, height: 1536 }
   }
 ];
 
-// Default aspect ratio
+// Default aspect ratio (Portrait 9:16 for mobile-first)
 export const DEFAULT_ASPECT_RATIO = ASPECT_RATIOS[0];
 
 /**
- * Get dimensions for a given aspect ratio value and quality setting
+ * Get dimensions for a given aspect ratio value
  */
-export function getDimensionsFromAspectRatio(aspectRatioValue: string, quality: 'high' | 'low' = 'high'): { width: number; height: number } {
+export function getDimensionsFromAspectRatio(aspectRatioValue: string): { width: number; height: number } {
   const aspectRatio = ASPECT_RATIOS.find(r => r.value === aspectRatioValue);
   if (!aspectRatio) {
-    // Return default square dimensions
-    return { width: 1024, height: 1024 };
+    // Return default portrait dimensions
+    return { width: 1080, height: 1920 };
   }
 
-  return aspectRatio.dimensions[quality];
+  return aspectRatio.dimensions;
 }
 
 /**
- * Get dimensions for a specific aspect ratio config and quality
+ * Get dimensions for a specific aspect ratio config
  */
-export function getDimensionsForQuality(aspectRatio: AspectRatioConfig, quality: 'high' | 'low'): { width: number; height: number } {
-  return aspectRatio.dimensions[quality];
+export function getDimensionsFromConfig(aspectRatio: AspectRatioConfig): { width: number; height: number } {
+  return aspectRatio.dimensions;
 }
 
 /**
@@ -201,4 +213,88 @@ export function detectAspectRatio(width: number, height: number): AspectRatioCon
 
   // Default to square if no match
   return DEFAULT_ASPECT_RATIO;
+}
+
+/**
+ * Get valid dimensions for a model, applying constraints if needed
+ */
+export function getValidDimensions(
+  modelId: string,
+  requested: { width: number; height: number }
+): { width: number; height: number } {
+  const model = getModelById(modelId);
+
+  if (!model || model.resolutionSupport === 'none') {
+    return requested; // Will be ignored by API anyway
+  }
+
+  if (model.resolutionConstraints?.minSize) {
+    const minSize = model.resolutionConstraints.minSize;
+    const maxSize = model.resolutionConstraints.maxSize || 4096;
+
+    return {
+      width: Math.max(minSize, Math.min(maxSize, requested.width)),
+      height: Math.max(minSize, Math.min(maxSize, requested.height))
+    };
+  }
+
+  return requested;
+}
+
+/**
+ * Check if a model supports custom resolutions
+ */
+export function supportsCustomResolutions(modelId: string): boolean {
+  const model = getModelById(modelId);
+  return model?.resolutionSupport === 'custom';
+}
+
+/**
+ * Check if a model supports resolution controls at all
+ */
+export function supportsResolutionControls(modelId: string): boolean {
+  const model = getModelById(modelId);
+  return model?.resolutionSupport !== 'none';
+}
+
+/**
+ * Get supported aspect ratios for a model
+ */
+export function getSupportedAspectRatios(modelId: string): string[] {
+  const model = getModelById(modelId);
+
+  // If model has explicit supported aspect ratios, use those
+  if (model?.supportedAspectRatios) {
+    return model.supportedAspectRatios;
+  }
+
+  // If model doesn't support aspect ratio selection (e.g., Nano-Banana), return empty array
+  if (model?.resolutionSupport === 'none') {
+    return [];
+  }
+
+  // Default: support all aspect ratios
+  return ASPECT_RATIOS.map(r => r.id);
+}
+
+/**
+ * Get GPT-compatible size string for aspect ratio
+ */
+export function getGPTCompatibleSize(aspectRatio: string): string {
+  const mapping: Record<string, string> = {
+    'square_hd': '1024x1024',
+    'landscape_16_9': '1536x1024',
+    'landscape_4_3': '1536x1024',
+    'portrait_16_9': '1024x1536',
+    'portrait_4_3': '1024x1536',
+  };
+  return mapping[aspectRatio] || 'auto';
+}
+
+/**
+ * Check if an aspect ratio is supported by a model
+ */
+export function isAspectRatioSupported(modelId: string, aspectRatioId: string): boolean {
+  const supportedRatios = getSupportedAspectRatios(modelId);
+  return supportedRatios.includes(aspectRatioId);
 }

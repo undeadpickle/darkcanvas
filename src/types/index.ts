@@ -30,7 +30,6 @@ export interface ImageGeneration {
   strength?: number; // For image-to-image transformation intensity
   usage?: OpenAIUsage; // For BYOK models
   aspectRatio?: string; // The aspect ratio value used during generation
-  resolutionQuality?: 'high' | 'low'; // Quality setting for resolution
   createdAt: Date;
 }
 
@@ -44,10 +43,6 @@ export interface OpenAIUsage {
   };
 }
 
-export interface ResolutionSettings {
-  quality: 'high' | 'low';
-  dimensions: { width: number; height: number };
-}
 
 export interface GenerationFormData {
   prompt: string;

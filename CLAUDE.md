@@ -62,7 +62,12 @@ claude -p "Write tests for image generation with mock Fal.ai responses"
 claude -p "Now implement the code to pass these tests"
 ```
 
-**[BrowserTools MCP]** Use BrowserTools MCP to capture console logs, network traffic, screenshots, and browser runtime errors in real-time so Claude Code has visibility into front-end issues that might not show up via console.log alone.
+**[BrowserTools MCP]** Use BrowserTools MCP to capture console logs, network traffic, screenshots, and browser runtime errors in real-time so Claude Code has visibility into front-end issues that might not show up via console.log alone. https://browsertools.agentdesk.ai/installation
+
+```bash
+# Running the BrowserTools Server: Aggregates logs from the chrome extension and sets up websockets for screenshot capture. Run this from your terminal within any directory:
+npx @agentdeskai/browser-tools-server@1.2.0
+```
 
 ### Effective Prompting for Claude Code
 
@@ -70,15 +75,6 @@ claude -p "Now implement the code to pass these tests"
 2. **Reference the docs**: "Following our PRD and CLAUDE.md guidelines..."
 3. **Ask for exploration first**: "What's the current structure of the generation module?"
 4. **Use TDD for critical paths**: Write tests first, then implementation
-
-### Git Worktrees for Parallel Work
-
-```bash
-# Work on multiple features simultaneously
-git worktree add ../darkcanvas-api-key feature/api-key
-git worktree add ../darkcanvas-generation feature/generation
-# Run separate Claude sessions in each
-```
 
 ### ⚠️ Claude Code Limitations for MVP
 
@@ -169,8 +165,6 @@ git worktree add ../darkcanvas-generation feature/generation
 
 ### What NOT to Build (YAGNI)
 
-❌ History/gallery (Phase 3)
-❌ Parameter presets (Phase 3)
 ❌ Perfect error handling
 ❌ Analytics
 ❌ User accounts
@@ -264,6 +258,7 @@ describe("Critical Paths", () => {
 
 ### Browser Automation
 
+Use browsertools mcp for console logging checks
 Use Playwright for all browser research:
 
 ```bash

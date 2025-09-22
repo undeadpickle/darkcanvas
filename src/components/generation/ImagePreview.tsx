@@ -1,7 +1,6 @@
-import { X, FileImage, Upload } from 'lucide-react';
+import { X, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { formatFileSize } from '@/lib/image-utils';
 import type { SourceImage } from '@/types';
 
 interface ImagePreviewProps {
@@ -30,9 +29,9 @@ export function ImagePreview({
             />
             {!disabled && (
               <Button
-                variant="destructive"
-                size="sm"
-                className="absolute top-2 right-2"
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 h-8 w-8"
                 onClick={onRemove}
               >
                 <X className="w-4 h-4" />
@@ -40,16 +39,6 @@ export function ImagePreview({
             )}
           </div>
 
-          {/* Image Info */}
-          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-            <div className="flex items-center space-x-2">
-              <FileImage className="w-4 h-4" />
-              <span>{currentImage.filename || 'Uploaded image'}</span>
-            </div>
-            {currentImage.file && (
-              <span>{formatFileSize(currentImage.file.size)}</span>
-            )}
-          </div>
 
           {/* Change Image Button */}
           {!disabled && (

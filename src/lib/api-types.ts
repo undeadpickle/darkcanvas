@@ -12,6 +12,10 @@ export interface FalApiError {
   };
   status?: number;
   message?: string;
+  // Additional fields for proper error handling
+  response?: unknown;
+  data?: unknown;
+  result?: unknown;
 }
 
 export interface FalImageResponse {

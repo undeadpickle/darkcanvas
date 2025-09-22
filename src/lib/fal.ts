@@ -1,6 +1,6 @@
 import * as fal from "@fal-ai/serverless-client";
 import { log } from "./logger";
-import { DEFAULT_TEXT_TO_IMAGE_MODEL, getModelById, getDimensionsFromAspectRatio } from "./models";
+import { DEFAULT_TEXT_TO_IMAGE_MODEL, getModelById, getDimensionsFromAspectRatio, getValidDimensions, getGPTCompatibleSize } from "./models";
 import type { SourceImage, OpenAIUsage } from "@/types";
 import type { FalApiError, FalImageResponse, FalApiErrorDetail } from "./api-types";
 
@@ -22,12 +22,35 @@ function getOpenAIApiKey(): string | null {
   return apiKey;
 }
 
-// Get correct dimensions for aspect ratio, with fallback to 1024x1024
-function getCorrectDimensions(aspectRatio?: string, quality: 'high' | 'low' = 'high'): { width: number; height: number } {
+// Get correct dimensions for aspect ratio, with fallback to portrait
+function getCorrectDimensions(aspectRatio?: string): { width: number; height: number } {
   if (aspectRatio) {
-    return getDimensionsFromAspectRatio(aspectRatio, quality);
+    return getDimensionsFromAspectRatio(aspectRatio);
   }
-  return { width: 1024, height: 1024 };
+  return { width: 1080, height: 1920 }; // Default to portrait 9:16
+}
+
+// Prepare image_size parameter based on model capabilities
+function prepareImageSize(modelId: string, request: GenerationRequest | ImageToImageRequest): unknown {
+  // Nano-Banana: Don't send image_size at all (uses source image dimensions)
+  if (modelId.includes('nano-banana')) {
+    return undefined;
+  }
+
+  // OpenAI models: Use preset strings only
+  if (modelId.includes('gpt-image-1')) {
+    return getGPTCompatibleSize(request.imageSize || 'square_hd');
+  }
+
+  // Models with custom dimension support (SDXL-Lightning, SeedDream)
+  if (request.customDimensions) {
+    // Apply model-specific constraints
+    const validDimensions = getValidDimensions(modelId, request.customDimensions);
+    return validDimensions;
+  }
+
+  // Fallback to preset string
+  return request.imageSize || 'square_hd';
 }
 
 // Configure fal client with API key from environment
@@ -52,7 +75,6 @@ export interface GenerationRequest {
   imageFormat?: string;
   openaiApiKey?: string; // For BYOK models
   aspectRatio?: string; // To track the aspect ratio used during generation
-  resolutionQuality?: 'high' | 'low'; // Quality setting for resolution
 }
 
 export interface ImageToImageRequest {
@@ -68,7 +90,6 @@ export interface ImageToImageRequest {
   imageFormat?: string;
   openaiApiKey?: string; // For BYOK models
   aspectRatio?: string; // To track the aspect ratio used during generation
-  resolutionQuality?: 'high' | 'low'; // Quality setting for resolution
 }
 
 export interface GenerationResult {
@@ -107,11 +128,10 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
       sync_mode: true,
     };
 
-    // Use custom dimensions if provided, otherwise use image_size string
-    if (request.customDimensions) {
-      input.image_size = request.customDimensions;
-    } else {
-      input.image_size = request.imageSize || "square_hd";
+    // Set image_size based on model capabilities
+    const imageSize = prepareImageSize(modelId, request);
+    if (imageSize !== undefined) {
+      input.image_size = imageSize;
     }
 
     // Add model-specific parameters
@@ -142,10 +162,11 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
         throw new Error('Invalid OpenAI API key format. Key must start with "sk-" and be at least 40 characters long.');
       }
 
-      // Use absolute minimum required parameters only
+      // Use GPT-specific parameters (image_size already set by prepareImageSize)
       input = {
         prompt: request.prompt.trim(),
-        openai_api_key: request.openaiApiKey.trim()
+        openai_api_key: request.openaiApiKey.trim(),
+        image_size: input.image_size || 'auto' // Use the size set by prepareImageSize
       };
 
       log.info('GPT model input prepared', { inputKeys: Object.keys(input) });
@@ -158,7 +179,7 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
     log.info('Starting fal.ai API request', {
       modelId,
       customDimensions: request.customDimensions,
-      resolutionQuality: request.resolutionQuality
+      aspectRatio: request.aspectRatio
     });
 
     const result = await fal.subscribe(modelId, {
@@ -172,6 +193,16 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
     log.info('Generation completed', { hasResult: !!result, model: modelId });
 
     const typedResult = result as GenerationResult;
+
+    // Always ensure images have dimensions (handles SeedDream and other models)
+    if (typedResult.images && Array.isArray(typedResult.images)) {
+      const correctDimensions = getCorrectDimensions(request.aspectRatio);
+      typedResult.images = typedResult.images.map(img => ({
+        url: typeof img === 'string' ? img : img.url,
+        width: img.width || correctDimensions.width,
+        height: img.height || correctDimensions.height
+      }));
+    }
 
     // Handle different response structures from different models
     if (!typedResult.images || !Array.isArray(typedResult.images)) {
@@ -192,7 +223,7 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
         // GPT models should return { images: [{ url: "..." }], usage: {...} }
         if (resultAny.images && Array.isArray(resultAny.images)) {
           log.info('Found GPT images array', { imageCount: resultAny.images.length });
-          const correctDimensions = getCorrectDimensions(request.aspectRatio, request.resolutionQuality);
+          const correctDimensions = getCorrectDimensions(request.aspectRatio);
           images = resultAny.images.map((img: FalImageResponse | string) => ({
             url: typeof img === 'string' ? img : img.url,
             width: typeof img === 'string' ? correctDimensions.width : (img.width || correctDimensions.width),
@@ -203,7 +234,7 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
         }
       } else {
         // Handle other model formats
-        const correctDimensions = getCorrectDimensions(request.aspectRatio, request.resolutionQuality);
+        const correctDimensions = getCorrectDimensions(request.aspectRatio);
         if (resultAny.image) {
           // Handle single image object (WAN model format)
           if (typeof resultAny.image === 'object' && resultAny.image !== null && 'url' in resultAny.image) {
@@ -281,9 +312,9 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
 
       // Check if error is a fal.ai API error with response details
       const typedError = error as FalApiError;
-      if (typedError.body || (typedError as any).response) {
+      if (typedError.body || typedError.response) {
         try {
-          const responseBody = typedError.body || (typedError as any).response;
+          const responseBody = typedError.body || typedError.response;
           let parsedError;
 
           if (typeof responseBody === 'string') {
@@ -317,8 +348,8 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
       }
 
       // Try to extract any partial result data if available
-      if ((typedError as any).data || (typedError as any).result) {
-        log.info('Error contains partial data', { data: (typedError as any).data || (typedError as any).result });
+      if (typedError.data || typedError.result) {
+        log.info('Error contains partial data', { data: typedError.data || typedError.result });
       }
     }
 
@@ -378,14 +409,6 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
         throw new Error('OpenAI API key is required for GPT Image 1 models');
       }
 
-      // Map aspect ratios to GPT sizes
-      const gptSizeMap: Record<string, string> = {
-        'square_hd': '1024x1024',
-        'landscape_4_3': '1536x1024',
-        'landscape_16_9': 'auto',
-        'portrait_4_3': '1024x1536',
-        'portrait_16_9': 'auto',
-      };
 
       // The GPT edit model uses image_urls (array) format
       // Ensure we use the correct format regardless of what was set earlier
@@ -394,19 +417,18 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
       }
       input.image_urls = [request.sourceImage.url];
 
-      input.image_size = gptSizeMap[request.imageSize || 'square_hd'] || 'auto';
       input.num_images = request.numImages || 1;
       input.quality = 'auto';
       input.input_fidelity = 'low'; // Default to low for more creative edits
       input.openai_api_key = request.openaiApiKey;
-    }
 
-    // Add optional parameters (only for non-GPT models since GPT has different size mapping)
-    if (!request.modelId.includes('gpt-image-1')) {
-      if (request.customDimensions) {
-        input.image_size = request.customDimensions;
-      } else if (request.imageSize) {
-        input.image_size = request.imageSize;
+      // Use GPT-specific size mapping
+      input.image_size = getGPTCompatibleSize(request.imageSize || 'square_hd');
+    } else {
+      // For non-GPT models, use the universal image_size preparation
+      const imageSize = prepareImageSize(request.modelId, request);
+      if (imageSize !== undefined) {
+        input.image_size = imageSize;
       }
     }
     if (request.numImages) {
@@ -430,6 +452,16 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
 
     const typedResult = result as GenerationResult;
 
+    // Always ensure images have dimensions (handles SeedDream and other models)
+    if (typedResult.images && Array.isArray(typedResult.images)) {
+      const correctDimensions = getCorrectDimensions(request.aspectRatio);
+      typedResult.images = typedResult.images.map(img => ({
+        url: typeof img === 'string' ? img : img.url,
+        width: img.width || correctDimensions.width,
+        height: img.height || correctDimensions.height
+      }));
+    }
+
     // Handle different response structures from different models (reuse existing logic)
     if (!typedResult.images || !Array.isArray(typedResult.images)) {
       log.info('Converting I2I response structure', {
@@ -442,7 +474,7 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
       const resultAny = result as Record<string, unknown>;
       let images: Array<{ url: string; width: number; height: number }> = [];
 
-      const correctDimensions = getCorrectDimensions(request.aspectRatio, request.resolutionQuality);
+      const correctDimensions = getCorrectDimensions(request.aspectRatio);
       if (resultAny.image) {
         // Handle single image object (WAN model format)
         if (typeof resultAny.image === 'object' && resultAny.image !== null && 'url' in resultAny.image) {
@@ -511,9 +543,9 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
 
       // Check if error is a fal.ai API error with response details
       const typedError = error as FalApiError;
-      if (typedError.body || (typedError as any).response) {
+      if (typedError.body || typedError.response) {
         try {
-          const responseBody = typedError.body || (typedError as any).response;
+          const responseBody = typedError.body || typedError.response;
           let parsedError;
 
           if (typeof responseBody === 'string') {

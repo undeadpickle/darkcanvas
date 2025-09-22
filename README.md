@@ -56,9 +56,8 @@ src/
 ├── components/
 │   ├── ui/              # shadcn/ui components (Button, Card, Select, Slider, Switch)
 │   └── generation/      # Image generation components
-│       ├── GenerationForm.tsx       # Main form with mode toggle
+│       ├── GenerationForm.tsx       # Main form with mode toggle and auto-save
 │       ├── ModelSelector.tsx        # Model selection component
-│       ├── ResolutionToggle.tsx     # Resolution quality toggle (High/Fast modes)
 │       ├── AspectRatioSelector.tsx  # Aspect ratio selection component
 │       ├── GenerationStatus.tsx     # Generation status display
 │       ├── ImageUpload.tsx          # File upload orchestrator
@@ -76,6 +75,10 @@ src/
 │   ├── error-utils.ts  # User-friendly error message utilities
 │   ├── api-types.ts    # API response type definitions
 │   ├── logger.ts       # Simple logging
+│   ├── storage.ts      # localStorage utilities for preferences
+│   ├── directory-storage.ts  # IndexedDB for File System API handles
+│   ├── file-system.ts  # File System Access API utilities
+│   ├── download-utils.ts     # Auto-download functionality
 │   └── utils.ts        # Utilities
 ├── types/              # TypeScript definitions
 └── index.css          # Global styles with default theme
@@ -106,7 +109,8 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 - ✅ Consolidated interface with Image/Video tabs
 - ✅ Mode toggle between text-to-image and image-to-image within Image tab
 - ✅ API key management (secure environment variables)
-- ✅ Image download functionality
+- ✅ **Enhanced auto-save with folder selection** - Choose custom save location or use Downloads folder
+- ✅ **File System Access API integration** - Silent auto-save to selected folders (Chrome 122+)
 - ✅ Error handling and loading states
 - ✅ Responsive design with shadcn/ui
 - ✅ Clean default theme with excellent contrast

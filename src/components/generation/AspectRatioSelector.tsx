@@ -1,12 +1,12 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AspectRatioConfig } from '@/lib/models';
-import { getDimensionsForQuality } from '@/lib/models';
+import { getDimensionsFromConfig, isAspectRatioSupported } from '@/lib/models';
 
 interface AspectRatioSelectorProps {
   selectedAspectRatio: string;
   onAspectRatioChange: (value: string) => void;
   aspectRatios: AspectRatioConfig[];
-  useHighResolution?: boolean;
+  selectedModelId: string;
   disabled?: boolean;
 }
 
@@ -14,10 +14,9 @@ export function AspectRatioSelector({
   selectedAspectRatio,
   onAspectRatioChange,
   aspectRatios,
-  useHighResolution = true,
+  selectedModelId,
   disabled = false
 }: AspectRatioSelectorProps) {
-  const quality = useHighResolution ? 'high' : 'low';
 
   return (
     <div className="space-y-2">
@@ -30,10 +29,18 @@ export function AspectRatioSelector({
         </SelectTrigger>
         <SelectContent>
           {aspectRatios.map((ratio) => {
-            const dimensions = getDimensionsForQuality(ratio, quality);
+            const dimensions = getDimensionsFromConfig(ratio);
+            const isSupported = isAspectRatioSupported(selectedModelId, ratio.id);
             return (
-              <SelectItem key={ratio.id} value={ratio.value}>
-                <span>{ratio.name} • {dimensions.width}×{dimensions.height}</span>
+              <SelectItem
+                key={ratio.id}
+                value={ratio.value}
+                disabled={!isSupported}
+              >
+                <span className={!isSupported ? 'text-muted-foreground opacity-50' : ''}>
+                  {ratio.name} • {dimensions.width}×{dimensions.height}
+                  {!isSupported && ' (Not supported)'}
+                </span>
               </SelectItem>
             );
           })}
