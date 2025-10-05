@@ -25,6 +25,17 @@ PNG images with editing metadata
 ### Resolution Constraints
 1024px to 4096px, maintains aspect ratios
 
+## Universal Parameters Support
+
+This model supports all universal parameters implemented in Phase 5.0:
+
+- ✅ **seed**: For reproducible editing results (range: 0-2147483647)
+- ✅ **negative_prompt**: For filtering unwanted elements and improving output quality
+- ✅ **strength**: Universal transformation slider (0.1-1.0) - lower values preserve original, higher values allow more change
+- ✅ **localStorage persistence**: Seed values automatically saved between sessions
+
+These parameters are automatically handled by the DarkCanvas interface and don't require manual configuration in the API call.
+
 ## Capabilities
 
 - Unified generation and editing architecture

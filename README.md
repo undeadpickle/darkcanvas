@@ -98,13 +98,17 @@ See [PRD](./docs/darkcanvas-prd.md) for product requirements and architecture.
 - ✅ 3 AI models: SDXL-Lightning, SeedDream v4, GPT Image 1 (OpenAI DALL-E BYOK)
 - ✅ Aspect ratio presets (Square, Landscape, Portrait variations)
 - ✅ **Resolution quality toggle** - Choose between High Quality (1920×1080) and Fast Mode (1024×576) for speed/cost control
+- ✅ **Advanced parameters** - Seed for reproducibility (0-2147483647), negative prompts for quality control
+- ✅ **localStorage persistence** - Seed values automatically saved and restored between sessions
 - ✅ PNG format output with safety checker disabled
 
 ### Image-to-Image Generation
-- ✅ 2 specialized models: SeedDream v4 Edit, GPT Image 1 Edit (OpenAI BYOK)
+- ✅ 6 specialized models: SeedDream v4 Edit, Nano-Banana Edit, GPT Image 1 Edit (BYOK), WAN 2.5 Preview, FLUX.1 Dev I2I, Qwen Edit Plus LoRA
 - ✅ File upload with preview and validation (PNG, JPG, WebP up to 15MB with automatic compression)
 - ✅ Automatic aspect ratio detection - aspect ratio selector updates to match uploaded image dimensions
 - ✅ **Resolution quality toggle** - Same high/low quality options for image-to-image generation
+- ✅ **Transformation strength** - Universal slider for all I2I models (0.1-1.0) to control how much the image changes
+- ✅ **Advanced parameters** - Same seed and negative prompt support as text-to-image for consistent results
 - ✅ **Use generated image as source** - "Use in Image-to-Image" button allows seamless iteration
 
 ### Video Generation

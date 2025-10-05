@@ -75,6 +75,8 @@ export interface GenerationRequest {
   imageFormat?: string;
   openaiApiKey?: string; // For BYOK models
   aspectRatio?: string; // To track the aspect ratio used during generation
+  seed?: number; // For reproducible results (0-2147483647)
+  negativePrompt?: string; // Content to avoid in generation
 }
 
 export interface ImageToImageRequest {
@@ -90,6 +92,8 @@ export interface ImageToImageRequest {
   imageFormat?: string;
   openaiApiKey?: string; // For BYOK models
   aspectRatio?: string; // To track the aspect ratio used during generation
+  seed?: number; // For reproducible results (0-2147483647)
+  negativePrompt?: string; // Content to avoid in generation
 }
 
 export interface GenerationResult {
@@ -127,6 +131,14 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
       format: request.imageFormat || "png", // Always PNG format
       sync_mode: true,
     };
+
+    // Add universal optional parameters
+    if (request.seed !== undefined) {
+      input.seed = request.seed;
+    }
+    if (request.negativePrompt) {
+      input.negative_prompt = request.negativePrompt;
+    }
 
     // Set image_size based on model capabilities
     const imageSize = prepareImageSize(modelId, request);
@@ -179,7 +191,10 @@ export async function generateImage(request: GenerationRequest): Promise<Generat
     log.info('Starting fal.ai API request', {
       modelId,
       customDimensions: request.customDimensions,
-      aspectRatio: request.aspectRatio
+      aspectRatio: request.aspectRatio,
+      seed: input.seed,
+      negative_prompt: input.negative_prompt,
+      fullInput: input
     });
 
     const result = await fal.subscribe(modelId, {
@@ -382,6 +397,14 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
       sync_mode: true,
     };
 
+    // Add universal optional parameters
+    if (request.seed !== undefined) {
+      input.seed = request.seed;
+    }
+    if (request.negativePrompt) {
+      input.negative_prompt = request.negativePrompt;
+    }
+
     // Add format parameter (FLUX uses output_format, others use format)
     if (request.modelId.includes('flux')) {
       input.output_format = request.imageFormat || "png";
@@ -399,6 +422,10 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
     } else {
       // Array of image URLs (SeedDream, Nano-Banana)
       input.image_urls = [request.sourceImage.url];
+      // Add strength for models that support it (e.g., SeedDream Edit)
+      if (request.strength !== undefined) {
+        input.strength = request.strength;
+      }
     }
 
     // Add model-specific parameters
@@ -480,6 +507,15 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
       // Only apply custom inference steps for non-WAN and non-GPT models
       input.num_inference_steps = request.numInferenceSteps;
     }
+
+    // Log I2I request details with all parameters
+    log.info('Starting fal.ai I2I API request', {
+      modelId: request.modelId,
+      strength: input.strength,
+      seed: input.seed,
+      negative_prompt: input.negative_prompt,
+      fullInput: input
+    });
 
     const result = await fal.subscribe(request.modelId, {
       input,

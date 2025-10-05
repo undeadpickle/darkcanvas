@@ -25,6 +25,16 @@ JPEG/PNG images with content_type metadata
 ### Resolution Constraints
 Predefined aspect ratios, high-definition options available
 
+## Universal Parameters Support
+
+This model supports all universal parameters implemented in Phase 5.0:
+
+- ✅ **seed**: For reproducible generation (range: 0-2147483647)
+- ✅ **negative_prompt**: For filtering unwanted content and improving quality
+- ✅ **localStorage persistence**: Seed values automatically saved between sessions
+
+These parameters are automatically handled by the DarkCanvas interface and don't require manual configuration in the API call.
+
 ## Capabilities
 
 - Lightning-fast SDXL generation optimized for speed

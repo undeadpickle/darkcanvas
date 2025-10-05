@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Skull, Loader2, Image as ImageIcon, Type, Folder, FolderOpen } from 'lucide-react';
+import { Skull, Loader2, Image as ImageIcon, Type, Folder, FolderOpen, Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
@@ -40,6 +40,11 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
   const [selectedDirectoryName, setSelectedDirectoryName] = useState<string | null>(null);
   const [fileSystemSupported, setFileSystemSupported] = useState(false);
 
+  // Advanced parameters (Phase 1: Quick Wins)
+  const [seed, setSeed] = useState<number | undefined>(undefined);
+  const [negativePrompt, setNegativePrompt] = useState('');
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+
   // Initialize OpenAI API key from environment on mount
   useEffect(() => {
     const envKey = getOpenAIKeyFromEnv();
@@ -59,6 +64,28 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
   useEffect(() => {
     setAutoDownloadPreference(autoDownload);
   }, [autoDownload]);
+
+  // Load seed from localStorage on mount
+  useEffect(() => {
+    const savedSeed = localStorage.getItem('darkcanvas_last_seed');
+    if (savedSeed) {
+      const seedNum = parseInt(savedSeed);
+      if (!isNaN(seedNum) && seedNum >= 0 && seedNum <= 2147483647) {
+        setSeed(seedNum);
+        log.info('Loaded saved seed from localStorage', { seed: seedNum });
+      }
+    }
+  }, []);
+
+  // Save seed to localStorage when it changes
+  useEffect(() => {
+    if (seed !== undefined) {
+      localStorage.setItem('darkcanvas_last_seed', seed.toString());
+      log.info('Saved seed to localStorage', { seed });
+    } else {
+      localStorage.removeItem('darkcanvas_last_seed');
+    }
+  }, [seed]);
 
   // Check File System Access API support and load directory preferences
   useEffect(() => {
@@ -297,6 +324,8 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
           imageFormat: 'png',
           openaiApiKey: currentModel?.requiresOpenAIKey ? openaiApiKey : undefined,
           aspectRatio: selectedAspectRatio,
+          seed: seed,
+          negativePrompt: negativePrompt.trim() || undefined,
         });
       } else {
         // Image-to-image generation
@@ -317,6 +346,8 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
           imageFormat: 'png',
           openaiApiKey: currentModel?.requiresOpenAIKey ? openaiApiKey : undefined,
           aspectRatio: selectedAspectRatio,
+          seed: seed,
+          negativePrompt: negativePrompt.trim() || undefined,
         });
       }
 
@@ -324,7 +355,8 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
         ...generation,
         images: result.images,
         status: 'complete',
-        seed: result.seed,
+        seed: result.seed || seed,
+        negativePrompt: negativePrompt.trim() || undefined,
         usage: result.usage, // Include usage data for BYOK models
         aspectRatio: result.aspectRatio || selectedAspectRatio, // Include aspect ratio used for generation
       };
@@ -401,8 +433,8 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
 
   const isConfiguredState = isConfigured();
 
-  // Check if current model supports strength parameter (WAN models)
-  const supportsStrength = selectedModel.includes('wan') && generationType === 'image-to-image';
+  // All I2I models support strength parameter
+  const supportsStrength = generationType === 'image-to-image';
 
   return (
     <div className="space-y-6">
@@ -482,7 +514,7 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
               />
             </div>
 
-            {/* Strength Slider (WAN models only) */}
+            {/* Strength Slider (All I2I models) */}
             {supportsStrength && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">
@@ -496,6 +528,7 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
                     min={0.1}
                     step={0.1}
                     className="w-full"
+                    disabled={isGenerating}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -528,7 +561,88 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
             }}
             rows={4}
             className="resize-none"
+            disabled={isGenerating}
           />
+        </div>
+
+        {/* Advanced Settings */}
+        <div className="space-y-4">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+            className="text-muted-foreground hover:text-foreground"
+            disabled={isGenerating}
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Advanced Settings
+          </Button>
+
+          {showAdvancedSettings && (
+            <div className="space-y-4 border rounded-lg p-4 bg-muted/20">
+              {/* Seed Input */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Seed (Optional)
+                  </label>
+                  {seed !== undefined && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSeed(undefined)}
+                      className="h-6 px-2 text-xs"
+                      disabled={isGenerating}
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                <input
+                  type="number"
+                  placeholder="Leave empty for random (0-2147483647)"
+                  value={seed ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setSeed(undefined);
+                    } else {
+                      const num = parseInt(value);
+                      if (!isNaN(num) && num >= 0 && num <= 2147483647) {
+                        setSeed(num);
+                      }
+                    }
+                  }}
+                  disabled={isGenerating}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use the same seed to reproduce exact results. Leave empty for random generation.
+                </p>
+              </div>
+
+              {/* Negative Prompt */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Negative Prompt (Optional)
+                </label>
+                <Textarea
+                  placeholder="Describe what you don't want in the image (e.g., low quality, blurry, distorted)"
+                  value={negativePrompt}
+                  onChange={(e) => setNegativePrompt(e.target.value)}
+                  rows={2}
+                  className="resize-none"
+                  disabled={isGenerating}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Specify unwanted elements to improve generation quality
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* OpenAI Key Input (for BYOK models) */}

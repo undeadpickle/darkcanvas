@@ -27,6 +27,7 @@ export interface ImageGeneration {
   status: 'pending' | 'generating' | 'complete' | 'error';
   error?: string;
   seed?: number;
+  negativePrompt?: string; // Content to avoid in generation (universal parameter)
   strength?: number; // For image-to-image transformation intensity
   usage?: OpenAIUsage; // For BYOK models
   aspectRatio?: string; // The aspect ratio value used during generation

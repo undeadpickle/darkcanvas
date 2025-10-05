@@ -127,63 +127,31 @@ claude -p "Now implement the code to pass these tests"
 - **Testing**: Vitest but only 2-3 critical tests
 - **Logging**: Use our simple logger (lib/logger.ts)
 
-### Phase 1 MVP Scope (COMPLETED ✅)
+### Current Features (Phases 1-4.1 Complete)
 
-- [x] Single model support (SDXL-Lightning)
-- [x] Basic prompt input
-- [x] Generate button
-- [x] Display image result
-- [x] API key management (secure environment variables)
-- [x] Simple error handling
+**Platform:**
+- 3 text-to-image models (SDXL-Lightning, SeedDream v4, GPT Image 1 BYOK)
+- 6 image-to-image models (SeedDream Edit, Nano-Banana, GPT Edit BYOK, WAN 2.5, FLUX, Qwen)
+- 1 video model (Veo 3 Fast)
+- Image/Video tabs with mode toggle (T2I/I2I)
+- Auto-save with folder selection (File System Access API)
+- "Use in Image-to-Image" workflow for iteration
 
-### Phase 2 Scope (COMPLETED ✅)
+### Phase 5.0: Universal Parameters (COMPLETED ✅)
 
-- [x] Multiple model support (SDXL-Lightning, SeedDream v4)
-- [x] Model selector dropdown with descriptions and costs
-- [x] Aspect ratio presets (Square, Landscape, Portrait variations)
-- [x] PNG format output with safety checker disabled
-- [x] Robust response handling for different model formats
+**Core Features:**
+- [x] Seed parameter for reproducible generation (T2I & I2I, range: 0-2147483647)
+- [x] Negative prompt for quality control (T2I & I2I)
+- [x] Universal strength slider for ALL I2I models (0.1-1.0)
+- [x] localStorage persistence for seed values across sessions
+- [x] Advanced Settings collapsible UI section with clear/reset functionality
+- [x] Enhanced API logging with full parameter visibility for debugging
 
-### Phase 2.5: Image-to-Image (COMPLETED ✅)
-
-- [x] Mode toggle between text-to-image and image-to-image generation
-- [x] 4 specialized I2I models (SeedDream v4 Edit, Nano-Banana Edit, GPT Image 1 Edit BYOK, WAN 2.5 Preview)
-- [x] Image upload component with file validation (PNG, JPG, WebP up to 15MB with auto-compression)
-- [x] Unified API handling for different model input formats (image_url vs image_urls)
-- [x] Aspect ratio support for both generation modes
-
-### Phase 3.0: Consolidated UI (COMPLETED ✅)
-
-- [x] Top-level tabs (Image/Video) for future video features
-- [x] Consolidated text-to-image and image-to-image under single "Image" tab
-- [x] Fixed image upload functionality (replaced shadcn Input with native HTML input)
-- [x] Removed problematic WAN models for better reliability
-- [x] Added Video placeholder tab for future development
-- [x] Fixed build errors in image response handling logic
-
-### Phase 3.1: Use Generated Images as Source (COMPLETED ✅)
-
-- [x] "Use in Image-to-Image" button on generated image results
-- [x] Automatic mode switching from text-to-image to image-to-image
-- [x] Seamless image iteration workflow for creative exploration
-- [x] Auto-population of source image with aspect ratio detection
-
-### Phase 4.0: Video Generation with Auto-Save (COMPLETED ✅)
-
-- [x] Veo 3 Fast video generation model integration
-- [x] Video tab with 4s/6s/8s duration options
-- [x] 720p/1080p resolution support
-- [x] Optional audio generation
-- [x] File System Access API auto-save for images and videos
-- [x] Folder selection for organized output management
-
-### Phase 4.1: WAN 2.5 Preview Integration (COMPLETED ✅)
-
-- [x] Added WAN 2.5 Preview I2I model to model selection
-- [x] Full documentation in `docs/models/wan-25-preview-i2i.md`
-- [x] Support for scene reimagining and dramatic transformations
-- [x] Resolution constraints (384-5000px) with custom dimension support
-- [x] Works with existing `image_urls` array format handler
+**Testing:**
+- Validated SDXL-Lightning, SeedDream v4 (T2I), SeedDream v4 Edit (I2I)
+- Verified seed=42069, negative prompts, and strength parameters pass to API correctly
+- Confirmed auto-save toggle works, "Use in Image-to-Image" workflow functions
+- All parameters visible in console logs (`fullInput` object)
 
 ### What NOT to Build (YAGNI)
 
@@ -279,12 +247,65 @@ Each file contains technical specs, optimal use cases, parameter recommendations
 
 ### Adding New Fal.ai Models
 
-**Use the fal-media-specialist agent for all model research and documentation.**
+**CRITICAL: DO NOT attempt to add models yourself. ALWAYS delegate to the fal-media-specialist sub-agent.**
 
-1. **Research with Agent**: Use `.claude/agents/fal-media-specialist.md` to get current specs/pricing
-2. **Update models.ts** with exact format: `"Cost level ~$0.XX/image"`
-3. **Create Documentation**: Agent should generate new model MD file in `docs/models/`
-4. **Test API**: Verify the model works and check for special parameters
+**When a developer asks to add a new fal.ai model:**
+
+1. **Gather Required Information** (if not provided):
+   - Model name or description
+   - Model URL (fal.ai page link, e.g., `https://fal.ai/models/fal-ai/flux/dev`)
+   - Model type (text-to-image, image-to-image, or video)
+   - Purpose/intended use case
+
+2. **Delegate to fal-media-specialist Agent**:
+   ```bash
+   # Use the Task tool to launch the fal-media-specialist agent
+   Task(
+     subagent_type: "fal-media-specialist",
+     prompt: "Research and document the [model-name] model from fal.ai.
+             URL: [model-url]
+             Type: [text-to-image/image-to-image/video]
+
+             Follow the workflow in your agent instructions:
+             1. Navigate to the fal.ai model page using Chrome DevTools MCP
+             2. Extract complete API specifications (model ID, parameters, pricing, input format)
+             3. Create model documentation using template from docs/adding-new-models.md
+             4. Provide model config for src/lib/models.ts
+             5. Provide API integration code if special handling needed
+             6. Create testing checklist
+
+             Return: Complete model documentation, code snippets, and implementation plan."
+   )
+   ```
+
+3. **After Agent Returns - Implementation Checklist**:
+
+   **REQUIRED STEPS (complete ALL before marking task done):**
+
+   - [ ] Review the documentation markdown provided by the agent
+   - [ ] **CREATE MODEL DOCUMENTATION FILE**: Use the Write tool to create `docs/models/[model-name].md` with the content provided by the agent
+   - [ ] Implement code changes to `src/lib/models.ts` (add model config)
+   - [ ] Implement code changes to `src/lib/fal.ts` (if special handling needed)
+   - [ ] Test using Chrome DevTools MCP with the agent's checklist
+   - [ ] Verify universal parameters work (seed, negative_prompt, strength for I2I)
+   - [ ] Update CLAUDE.md (add new Phase section for the model)
+   - [ ] Update README.md (increment model count in features)
+
+   **File Creation is MANDATORY**: Every new model MUST have documentation in `docs/models/[model-name].md`. This is not optional - it's a required deliverable for model integration.
+
+**Why Delegate?**
+- The fal-media-specialist agent has browser automation tools (Chrome DevTools MCP)
+- It's specifically trained to research fal.ai documentation and extract specs
+- It follows the complete template from `docs/adding-new-models.md`
+- It ensures consistency with existing model implementations
+- You focus on code implementation and testing, not research
+
+**Universal Parameters (Phase 5.0):**
+All new models automatically support:
+- `seed` (0-2147483647) for reproducibility
+- `negative_prompt` for quality control
+- `strength` (0.1-1.0) for I2I models
+These are handled automatically - just verify the model supports them in fal.ai docs.
 
 **Cost Format Examples:**
 
@@ -363,7 +384,7 @@ npm run build && npm run preview
 
 _Project: DarkCanvas_
 _Goal: Ship MVP in 1 week_
-_Current Phase: 4.1 (COMPLETED ✅) - WAN 2.5 Preview Integration_
-_Updated: October 4, 2025_
-_Status: Complete image and video generation platform with 7 total models (3 text-to-image + 4 image-to-image + 1 video) including OpenAI BYOK models, WAN 2.5 scene reimagining, full auto-save capabilities, and seamless iteration workflow_
+_Current Phase: 5.0 (COMPLETED ✅) - Universal Parameters_
+_Updated: October 5, 2025_
+_Status: Complete image and video generation platform with 7 total models (3 text-to-image + 4 image-to-image + 1 video), advanced parameter controls (seed, negative prompt, strength), localStorage persistence, and full auto-save capabilities with seamless iteration workflow_
 _GitHub: https://github.com/undeadpickle/darkcanvas_
