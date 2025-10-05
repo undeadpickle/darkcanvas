@@ -379,13 +379,19 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
     const input: Record<string, unknown> = {
       prompt: request.prompt,
       enable_safety_checker: request.enableSafetyChecker ?? false,
-      format: request.imageFormat || "png",
       sync_mode: true,
     };
 
+    // Add format parameter (FLUX uses output_format, others use format)
+    if (request.modelId.includes('flux')) {
+      input.output_format = request.imageFormat || "png";
+    } else {
+      input.format = request.imageFormat || "png";
+    }
+
     // Add image input based on model format
     if (modelConfig.inputFormat === 'image_url') {
-      // Single image URL (WAN model)
+      // Single image URL (FLUX, WAN models)
       input.image_url = request.sourceImage.url;
       if (request.strength !== undefined) {
         input.strength = request.strength;
@@ -396,7 +402,43 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
     }
 
     // Add model-specific parameters
-    if (request.modelId.includes('wan/v2.2')) {
+    if (request.modelId.includes('flux')) {
+      // FLUX specific parameters - using documented defaults for optimal quality
+      input.num_inference_steps = request.numInferenceSteps || 40; // Official default (was 28)
+      input.guidance_scale = 4.5; // Official default (was 3.5)
+
+      // Quality guard negative prompt - prevents grainy/compressed artifacts
+      input.negative_prompt = "low quality, blurry, grainy, distorted, artifacts, compression";
+
+      // strength already set above if provided
+
+      // Set image_size for aspect ratio support
+      const imageSize = prepareImageSize(request.modelId, request);
+      if (imageSize !== undefined) {
+        input.image_size = imageSize;
+      }
+    } else if (request.modelId.includes('qwen-image-edit-plus-lora')) {
+      // Qwen Edit Plus LoRA specific parameters
+      // Using "High Quality (Best)" preset from docs for better image quality
+      input.num_inference_steps = request.numInferenceSteps || 35; // High quality (vs 28 default)
+      input.guidance_scale = 5; // Sharper prompt adherence (vs 4 default)
+      input.enable_safety_checker = false; // ALWAYS disabled for uncensored content
+      input.output_format = request.imageFormat || "png"; // png or jpeg
+
+      // Quality guard negative prompt - prevents grainy/compressed artifacts
+      input.negative_prompt = "low quality, blurry, distorted, artifacts, compression";
+
+      // Set image_size for aspect ratio support
+      const imageSize = prepareImageSize(request.modelId, request);
+      if (imageSize !== undefined) {
+        input.image_size = imageSize;
+      }
+
+      // Note: Additional optional parameters available but not exposed in UI:
+      // - num_images: 1-4 (batch generation) - already handled above
+      // - seed: integer (reproducibility) - could add seed tracking
+      // - loras: array (up to 3 custom LoRAs) - advanced feature for future
+    } else if (request.modelId.includes('wan/v2.2')) {
       // WAN v2.2 specific parameters (required for proper operation)
       input.guidance_scale = 3.5;
       input.guidance_scale_2 = 4;
@@ -576,6 +618,101 @@ export async function generateImageFromImage(request: ImageToImageRequest): Prom
         } catch (parseError) {
           log.warn('Could not parse I2I error response', { parseError });
         }
+      }
+    }
+
+    throw error;
+  }
+}
+
+// Generate video from image using fal.ai Seedance model
+export async function generateVideoFromImage(
+  prompt: string,
+  sourceImage: SourceImage,
+  settings?: Partial<VideoGenerationSettings>
+): Promise<GeneratedVideo> {
+  log.info('Starting image-to-video generation', { prompt, sourceImage, settings });
+
+  try {
+    const apiKey = getApiKey();
+    fal.config({ credentials: apiKey });
+
+    const finalSettings: Partial<VideoGenerationSettings> = {
+      duration: settings?.duration || "5s",
+      resolution: settings?.resolution || "1080p",
+      aspectRatio: settings?.aspectRatio || "auto",
+      cameraFixed: settings?.cameraFixed ?? false,
+      ...settings
+    };
+
+    log.info('Image-to-video generation request', {
+      prompt,
+      sourceImageUrl: sourceImage.url,
+      settings: finalSettings
+    });
+
+    const result = await fal.subscribe("fal-ai/bytedance/seedance/v1/pro/image-to-video", {
+      input: {
+        prompt,
+        image_url: sourceImage.url,
+        duration: parseInt(finalSettings.duration?.replace('s', '') || '5'),
+        resolution: finalSettings.resolution,
+        aspect_ratio: finalSettings.aspectRatio,
+        enable_safety_checker: false, // ALWAYS disabled for uncensored content
+        camera_fixed: finalSettings.cameraFixed,
+        seed: finalSettings.seed
+      },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          const logs = update.logs || [];
+          logs.forEach(logEntry => {
+            log.info('Image-to-video generation progress', { message: logEntry.message });
+          });
+        }
+      }
+    });
+
+    log.info('Image-to-video generation result', { result });
+
+    // Handle the video response
+    const resultData = result as { video?: { url: string } };
+
+    if (!resultData.video?.url) {
+      throw new Error('No video returned from API');
+    }
+
+    const generatedVideo: GeneratedVideo = {
+      url: resultData.video.url,
+      duration: finalSettings.duration || "5s",
+      resolution: finalSettings.resolution || "1080p",
+      aspectRatio: finalSettings.aspectRatio || "auto"
+    };
+
+    log.info('Image-to-video generation completed successfully', {
+      url: generatedVideo.url,
+      duration: generatedVideo.duration,
+      resolution: generatedVideo.resolution,
+      aspectRatio: generatedVideo.aspectRatio
+    });
+
+    return generatedVideo;
+
+  } catch (error) {
+    log.error('Image-to-video generation failed', { error, prompt });
+
+    // Handle specific API errors
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        throw new Error('Invalid or missing Fal.ai API key. Please check your .env file.');
+      }
+
+      if (error.message.includes('quota') || error.message.includes('billing')) {
+        throw new Error('Insufficient credits or billing issue. Please check your Fal.ai account.');
+      }
+
+      if (error.message.includes('content policy')) {
+        throw new Error('Video generation failed due to content policy restrictions. Please modify your prompt.');
       }
     }
 

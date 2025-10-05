@@ -106,6 +106,40 @@ export const IMAGE_TO_IMAGE_MODELS: ModelConfig[] = [
     resolutionConstraints: {
       fixedPresets: ["auto", "1024x1024", "1536x1024", "1024x1536"]
     }
+  },
+  {
+    id: "fal-ai/wan-25-preview/image-to-image",
+    name: "WAN 2.5 Preview",
+    description: "Scene reimagining & dramatic transformations",
+    costEstimate: "Medium cost ~$0.05/image",
+    generationType: "image-to-image",
+    inputFormat: "image_urls",
+    resolutionSupport: "custom",
+    resolutionConstraints: {
+      minSize: 384,
+      maxSize: 5000
+    }
+  },
+  {
+    id: "fal-ai/flux-general/image-to-image",
+    name: "FLUX.1 Dev I2I",
+    description: "Flexible I2I with controlnets & LoRAs - No content filters",
+    costEstimate: "Medium cost ~$0.04/megapixel",
+    generationType: "image-to-image",
+    inputFormat: "image_url",
+    resolutionSupport: "custom"
+  },
+  {
+    id: "fal-ai/qwen-image-edit-plus-lora",
+    name: "Qwen Edit Plus LoRA",
+    description: "LoRA-powered editing with custom styles - No content filters",
+    costEstimate: "Medium cost ~$0.04/megapixel",
+    generationType: "image-to-image",
+    inputFormat: "image_urls",
+    resolutionSupport: "custom",
+    resolutionConstraints: {
+      maxSize: 14142
+    }
   }
 ];
 
@@ -125,6 +159,22 @@ export const VIDEO_MODELS: ModelConfig[] = [
       defaultDuration: "8s",
       defaultResolution: "720p",
       defaultAspectRatio: "16:9"
+    }
+  },
+  {
+    id: "fal-ai/bytedance/seedance/v1/pro/image-to-video",
+    name: "Seedance 1.0 Pro",
+    description: "Animate static images with AI motion - No content filters",
+    costEstimate: "Medium ~$0.62/video (1080p 5s)",
+    generationType: "image-to-video",
+    videoConfig: {
+      durations: ["3s", "4s", "5s", "6s", "7s", "8s", "9s", "10s", "11s", "12s"],
+      resolutions: ["480p", "720p", "1080p"],
+      aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16", "auto"],
+      supportsAudio: false,
+      defaultDuration: "5s",
+      defaultResolution: "1080p",
+      defaultAspectRatio: "auto"
     }
   }
 ];

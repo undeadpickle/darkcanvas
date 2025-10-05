@@ -11,14 +11,16 @@ export const STORAGE_KEYS = {
 
 /**
  * Get the auto-download preference from localStorage
- * @returns boolean - true if auto-download is enabled, false otherwise
+ * @returns boolean - true if auto-download is enabled, false otherwise (defaults to true for new users)
  */
 export const getAutoDownloadPreference = (): boolean => {
   try {
-    return localStorage.getItem(STORAGE_KEYS.AUTO_DOWNLOAD) === 'true';
+    const stored = localStorage.getItem(STORAGE_KEYS.AUTO_DOWNLOAD);
+    // Default to true if no preference exists (new users get auto-save enabled)
+    return stored === null ? true : stored === 'true';
   } catch (error) {
-    // Handle cases where localStorage is not available
-    return false;
+    // Handle cases where localStorage is not available - default to true
+    return true;
   }
 };
 

@@ -61,11 +61,17 @@ claude -p "Write tests for image generation with mock Fal.ai responses"
 claude -p "Now implement the code to pass these tests"
 ```
 
-**[BrowserTools MCP]** Use BrowserTools MCP to capture console logs, network traffic, screenshots, and browser runtime errors in real-time so Claude Code has visibility into front-end issues that might not show up via console.log alone. https://browsertools.agentdesk.ai/installation
+**[Chrome DevTools MCP]** Use Chrome DevTools MCP for browser automation, console inspection, performance analysis, and debugging. Official MCP server from Google Chrome team - no extensions needed. https://github.com/ChromeDevTools/chrome-devtools-mcp
 
 ```bash
-# Running the BrowserTools Server: Aggregates logs from the chrome extension and sets up websockets for screenshot capture. Run this from your terminal within any directory:
-npx @agentdeskai/browser-tools-server@1.2.0
+# Installation: Add to your MCP config (automatically available in Claude Code)
+# No server needed - runs directly via npx
+{
+  "chrome-devtools": {
+    "command": "npx",
+    "args": ["-y", "chrome-devtools-mcp@latest"]
+  }
+}
 ```
 
 ### Effective Prompting for Claude Code
@@ -107,7 +113,7 @@ npx @agentdeskai/browser-tools-server@1.2.0
 - Follow plan, but pivot fast if blocked
 - Test only critical paths (API key, generation)
 - Use console.log for debugging (we have a simple logger)
-- **[BrowserTools MCP]** When console.log isn’t enough, use BrowserTools MCP (extension + local MCP server) so you can inspect console errors, network activity, and DOM state directly.
+- **[Chrome DevTools MCP]** When console.log isn't enough, use Chrome DevTools MCP to inspect browser state, analyze performance, capture screenshots, and debug runtime issues directly.
 - Commit when it works, not when it's perfect
 
 ## DarkCanvas Specific Guidelines
@@ -141,7 +147,7 @@ npx @agentdeskai/browser-tools-server@1.2.0
 ### Phase 2.5: Image-to-Image (COMPLETED ✅)
 
 - [x] Mode toggle between text-to-image and image-to-image generation
-- [x] 2 specialized I2I models (SeedDream v4 Edit, Nano-Banana Edit)
+- [x] 4 specialized I2I models (SeedDream v4 Edit, Nano-Banana Edit, GPT Image 1 Edit BYOK, WAN 2.5 Preview)
 - [x] Image upload component with file validation (PNG, JPG, WebP up to 15MB with auto-compression)
 - [x] Unified API handling for different model input formats (image_url vs image_urls)
 - [x] Aspect ratio support for both generation modes
@@ -161,6 +167,23 @@ npx @agentdeskai/browser-tools-server@1.2.0
 - [x] Automatic mode switching from text-to-image to image-to-image
 - [x] Seamless image iteration workflow for creative exploration
 - [x] Auto-population of source image with aspect ratio detection
+
+### Phase 4.0: Video Generation with Auto-Save (COMPLETED ✅)
+
+- [x] Veo 3 Fast video generation model integration
+- [x] Video tab with 4s/6s/8s duration options
+- [x] 720p/1080p resolution support
+- [x] Optional audio generation
+- [x] File System Access API auto-save for images and videos
+- [x] Folder selection for organized output management
+
+### Phase 4.1: WAN 2.5 Preview Integration (COMPLETED ✅)
+
+- [x] Added WAN 2.5 Preview I2I model to model selection
+- [x] Full documentation in `docs/models/wan-25-preview-i2i.md`
+- [x] Support for scene reimagining and dramatic transformations
+- [x] Resolution constraints (384-5000px) with custom dimension support
+- [x] Works with existing `image_urls` array format handler
 
 ### What NOT to Build (YAGNI)
 
@@ -239,13 +262,28 @@ describe("Critical Paths", () => {
 
 ## 🔍 Research & Integration Best Practices
 
+### Model Documentation Reference
+
+**ALWAYS consult our comprehensive model documentation when working with fal.ai models.**
+
+All current models have detailed documentation in `docs/models/`:
+- `fast-lightning-sdxl.md` - Free SDXL model specs and usage
+- `seedream-v4-text-to-image.md` - High-quality T2I model details
+- `gpt-image-1-text-to-image.md` - OpenAI BYOK T2I specifications
+- `seedream-v4-edit.md` - Primary I2I model documentation
+- `nano-banana-edit.md` - Google-powered I2I editing specs
+- `gpt-image-1-edit.md` - OpenAI BYOK I2I editing details
+- `veo3-fast.md` - Video generation model specifications
+
+Each file contains technical specs, optimal use cases, parameter recommendations, cost analysis, and integration notes.
+
 ### Adding New Fal.ai Models
 
-**ALWAYS get accurate pricing before adding models.**
+**Use the fal-media-specialist agent for all model research and documentation.**
 
-1. **Get Pricing**: Navigate to `https://fal.ai/models/[model-id]` with Playwright
-2. **Look for**: "Your request will cost $X per image" text
-3. **Update models.ts** with exact format: `"Cost level ~$0.XX/image"`
+1. **Research with Agent**: Use `.claude/agents/fal-media-specialist.md` to get current specs/pricing
+2. **Update models.ts** with exact format: `"Cost level ~$0.XX/image"`
+3. **Create Documentation**: Agent should generate new model MD file in `docs/models/`
 4. **Test API**: Verify the model works and check for special parameters
 
 **Cost Format Examples:**
@@ -257,12 +295,33 @@ describe("Critical Paths", () => {
 
 ### Browser Automation
 
-Use browsertools mcp for console logging checks
-Use Playwright for all browser research:
+Use Chrome DevTools MCP for all browser automation and research:
 
+**Installation** (add to MCP config):
+```json
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    }
+  }
+}
+```
+
+**Common Tasks**:
+- Navigate to URLs: Use `navigate_page` tool
+- Capture screenshots: Built into navigation tools
+- Performance analysis: Use `performance_analyze_insight`
+- Console inspection: Chrome DevTools Protocol provides full access
+- Network monitoring: Available via CDP integration
+- Responsive testing: Use `resize_page` tool
+
+**Example**:
 ```bash
-mcp__playwright__browser_navigate
-mcp__playwright__browser_snapshot
+# Research fal.ai model documentation
+navigate_page to https://fal.ai/models/fal-ai/flux
+performance_analyze_insight to check page performance
 ```
 
 ## Anti-Patterns to Avoid
@@ -304,7 +363,7 @@ npm run build && npm run preview
 
 _Project: DarkCanvas_
 _Goal: Ship MVP in 1 week_
-_Current Phase: 4.0 (COMPLETED ✅) - Video Generation with Auto-Save_
-_Updated: September 22, 2025_
-_Status: Complete image and video generation platform with 6 total models (3 text-to-image + 2 image-to-image + 1 video) including OpenAI BYOK models, full auto-save capabilities, and seamless iteration workflow_
+_Current Phase: 4.1 (COMPLETED ✅) - WAN 2.5 Preview Integration_
+_Updated: October 4, 2025_
+_Status: Complete image and video generation platform with 7 total models (3 text-to-image + 4 image-to-image + 1 video) including OpenAI BYOK models, WAN 2.5 scene reimagining, full auto-save capabilities, and seamless iteration workflow_
 _GitHub: https://github.com/undeadpickle/darkcanvas_

@@ -66,6 +66,7 @@ export const downloadImages = async (
 
 /**
  * Download a video with a descriptive filename
+ * Uses blob approach to force download instead of opening in browser
  * @param url - The video URL to download
  * @param prompt - The prompt used to generate the video
  * @param modelId - The model ID used for generation
@@ -86,9 +87,18 @@ export const downloadVideoWithFilename = async (
 
     log.info('Downloading video', { filename, url: url.substring(0, 50) + '...' });
 
-    // Create and trigger download
+    // Fetch video as blob to force download instead of opening in browser
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch video: ${response.statusText}`);
+    }
+
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    // Create and trigger download using blob URL
     const link = document.createElement('a');
-    link.href = url;
+    link.href = blobUrl;
     link.download = filename;
     link.style.display = 'none';
 
@@ -97,7 +107,10 @@ export const downloadVideoWithFilename = async (
     link.click();
     document.body.removeChild(link);
 
-    log.info('Video download triggered successfully', { filename });
+    // Clean up blob URL
+    URL.revokeObjectURL(blobUrl);
+
+    log.info('Video download completed successfully', { filename });
   } catch (error) {
     log.error('Failed to download video', { error, url, prompt, modelId });
     throw error;

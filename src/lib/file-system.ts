@@ -9,8 +9,7 @@ import {
   checkDirectoryPermission,
   requestDirectoryPermission,
   clearDirectoryHandle,
-  isFileSystemAccessSupported,
-  type DirectoryMetadata
+  isFileSystemAccessSupported
 } from './directory-storage';
 import {
   setUseDirectoryPickerPreference,

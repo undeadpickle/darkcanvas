@@ -1,6 +1,6 @@
 // Core types for DarkCanvas Phase 1 MVP + Image-to-Image + Video Generation
 
-export type GenerationType = 'text-to-image' | 'image-to-image' | 'text-to-video';
+export type GenerationType = 'text-to-image' | 'image-to-image' | 'text-to-video' | 'image-to-video';
 
 export interface GeneratedImage {
   url: string;
@@ -52,21 +52,24 @@ export interface GeneratedVideo {
 }
 
 export interface VideoGenerationSettings {
-  duration: '4s' | '6s' | '8s';
-  resolution: '720p' | '1080p';
-  aspectRatio: '16:9' | '9:16' | '1:1';
+  duration: '3s' | '4s' | '5s' | '6s' | '7s' | '8s' | '9s' | '10s' | '11s' | '12s';
+  resolution: '480p' | '720p' | '1080p';
+  aspectRatio: '21:9' | '16:9' | '4:3' | '1:1' | '3:4' | '9:16' | 'auto';
   generateAudio: boolean;
   enhancePrompt: boolean;
   autoFix: boolean;
   negativePrompt?: string;
   seed?: number;
+  sourceImage?: SourceImage; // For image-to-video generation
+  cameraFixed?: boolean; // For Seedance I2V
 }
 
 export interface VideoGeneration {
   id: string;
   prompt: string;
   modelId: string;
-  generationType: 'text-to-video';
+  generationType: 'text-to-video' | 'image-to-video';
+  sourceImage?: SourceImage; // For image-to-video mode
   video?: GeneratedVideo;
   status: 'pending' | 'generating' | 'complete' | 'error';
   error?: string;

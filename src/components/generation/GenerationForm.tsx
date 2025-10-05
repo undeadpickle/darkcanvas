@@ -35,7 +35,7 @@ export function GenerationForm({ onGeneration, externalSourceImage, onExternalSo
   const [openaiApiKey, setOpenaiApiKey] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [autoDownload, setAutoDownload] = useState(false);
+  const [autoDownload, setAutoDownload] = useState(true);
   const [useDirectoryPicker, setUseDirectoryPicker] = useState(false);
   const [selectedDirectoryName, setSelectedDirectoryName] = useState<string | null>(null);
   const [fileSystemSupported, setFileSystemSupported] = useState(false);
